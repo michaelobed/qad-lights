@@ -6,6 +6,9 @@
 //  
 //  Copyright © 2026 Michael Obed.
 
+#ifndef Config_hpp
+#define Config_hpp
+
 #include "esp_wifi_types.h"
 #include "nvs_flash.h"
 
@@ -35,3 +38,5 @@ class Config
         static constexpr uint32_t existenceNum = 0x99ef0b05;
         nvs_handle_t handle;
 };
+
+#endif
