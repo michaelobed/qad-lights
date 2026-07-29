@@ -30,6 +30,7 @@ extern "C" void app_main()
         errorHandler();
     }
 
+    /* Initialise NVS storage. */
     err = config.InitStorage();
     if(err != ESP_OK)
     {
@@ -37,7 +38,9 @@ extern "C" void app_main()
         errorHandler();
     }
 
-    if(!config.Load())
+    /* Load the config (or create one if it doesn't exist). */
+    err = config.Load();
+    if(err != ESP_OK)
     {
         ESP_LOGW(__func__, "Config did not exist. Saving afresh...");
         config.Save();

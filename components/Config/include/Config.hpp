@@ -23,6 +23,8 @@ class Config
             return c;
         }
 
+        
+        uint32_t LightingColour;
         static constexpr size_t NameMaxLen = 128;
         char Name[NameMaxLen];
         bool NetworkIsSTA;
@@ -31,12 +33,30 @@ class Config
 
         void EraseAll();
         esp_err_t InitStorage();
-        bool Load();
+        esp_err_t Load();
         void Save();
 
     private:
+        static constexpr int tagMaxLen = 32;
+        struct ConfigData
+        {
+            char tag[tagMaxLen];
+            void* data;
+            size_t size;
+        };
+
         static constexpr uint32_t existenceNum = 0x99ef0b05;
         nvs_handle_t handle;
+
+        static constexpr int dataMaxLen = 5;
+        ConfigData data[dataMaxLen] =
+        {
+            {   "lightingColour", &LightingColour, 4 },
+            {   "name",           Name,            NameMaxLen },
+            {   "networkIsSTA",   &NetworkIsSTA,   1 },
+            {   "networkPsk",     &NetworkPsk,     MAX_PASSPHRASE_LEN },
+            {   "networkSsid",    &NetworkSsid,    MAX_SSID_LEN }
+        };
 };
 
 #endif

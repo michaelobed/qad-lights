@@ -8,9 +8,12 @@
 
 #include "Config.hpp"
 #include <cstring>
+#include "esp_log.h"
 
 Config::Config()
 {
+    /* Default values go here. */
+    LightingColour = 0xffffff;
     strncpy(Name, "My QAD Lights", NameMaxLen);
     NetworkIsSTA = false;
     strncpy(NetworkSsid, "YourNetworkHere", MAX_SSID_LEN);
@@ -42,8 +45,9 @@ esp_err_t Config::InitStorage()
     return err;
 }
 
-bool Config::Load()
+esp_err_t Config::Load()
 {
+    esp_err_t err = ESP_OK;
     size_t size = 0;
     union
     {
@@ -55,28 +59,66 @@ bool Config::Load()
     /* Get the existence number. Do we exist? */
     nvs_get_u32(handle, "existence", &temp.u32);
     if(temp.u32 != existenceNum)
-        return false;
+        return ESP_FAIL;
 
     /* If we do, grab all the config data. */
-    size = NameMaxLen;
-    nvs_get_str(handle, "name", Name, &size);
-    nvs_get_u8(handle, "networkIsSTA", &temp.u8);
-    NetworkIsSTA = (temp.u8 > 0);
-    size = MAX_SSID_LEN;
-    nvs_get_str(handle, "networkSsid", NetworkSsid, &size);
-    size = MAX_PASSPHRASE_LEN;
-    nvs_get_str(handle, "networkPsk", NetworkPsk, &size);
+    for(int i = 0; i < dataMaxLen; i++)
+    {
+        switch(data[i].size)
+        {
+            case 1:
+                err = nvs_get_u8(handle, data[i].tag, static_cast<uint8_t*>(data[i].data));
+                break;
 
-    return true;
+            case 2:
+                err = nvs_get_u16(handle, data[i].tag, static_cast<uint16_t*>(data[i].data));
+                break;
+
+            case 4:
+                err = nvs_get_u32(handle, data[i].tag, static_cast<uint32_t*>(data[i].data));
+                break;
+
+            default:
+                size = data[i].size;
+                err = nvs_get_str(handle, data[i].tag, static_cast<char*>(data[i].data), &size);
+                break;
+        }
+
+        if(err != ESP_OK)
+        {
+            ESP_LOGE(__func__, "Could not load config data \"%s\" (%d)!", data[i].tag, err);
+            break;
+        }
+    }
+
+    return err;
 }
 
 void Config::Save()
 {
     nvs_set_u32(handle, "existence", existenceNum);
-    nvs_set_str(handle, "name", Name);
-    nvs_set_u8(handle, "networkIsSTA", NetworkIsSTA ? 0x01 : 0x00);
-    nvs_set_str(handle, "networkPsk", NetworkPsk);
-    nvs_set_str(handle, "networkSsid", NetworkSsid);
+
+    for(int i = 0; i < dataMaxLen; i++)
+    {
+        switch(data[i].size)
+        {
+            case 1:
+                nvs_set_u8(handle, data[i].tag, *static_cast<uint8_t*>(data[i].data));
+                break;
+
+            case 2:
+                nvs_set_u16(handle, data[i].tag, *static_cast<uint16_t*>(data[i].data));
+                break;
+
+            case 4:
+                nvs_set_u32(handle, data[i].tag, *static_cast<uint32_t*>(data[i].data));
+                break;
+
+            default:
+                nvs_set_str(handle, data[i].tag, static_cast<char*>(data[i].data));
+                break;
+        }
+    }
 
     nvs_commit(handle);
 }
