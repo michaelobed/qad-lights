@@ -9,10 +9,14 @@
 #include "Config.hpp"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include "Http.hpp"
+#include "Lighting.hpp"
 #include "Network.hpp"
+#include "freertos/task.h"
 
 static Config& config = Config::GetInstance();
+static Http& http = Http::GetInstance();
+static Lighting& lighting = Lighting::GetInstance();
 static Network& network = Network::GetInstance();
 
 static void errorHandler();
@@ -47,6 +51,14 @@ extern "C" void app_main()
     }
     else ESP_LOGI(__func__, "Config loaded successfully.");
 
+    /* Initialise the lighting driver. */
+    err = lighting.Init();
+    if(err != ESP_OK)
+    {
+        ESP_LOGE(__func__, "Could not init lighting driver (%d)!", err);
+        errorHandler();
+    }
+
     /* We have all the information we need. Start the WiFi! */
     if(config.NetworkIsSTA)
     {
@@ -64,6 +76,15 @@ extern "C" void app_main()
         }
         else ESP_LOGI(__func__, "WiFi access point started.");
     }
+
+    /* Get HTTP server going. */
+    err = http.Init();
+    if(err != ESP_OK)
+    {
+        ESP_LOGE(__func__, "Could not start HTTP server (%d)!", err);
+        errorHandler();
+    }
+    else ESP_LOGI(__func__, "HTTP server started.");
 
     ESP_LOGI(__func__, "Init done! Running main loop...");
 

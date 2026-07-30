@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Quick-and-Dirty Lights</title>
+
+        <!-- Uncomment this for ESP32-side web pages... -->
+        <style>[[STYLES]]</style>
+
+        <!-- ... or uncomment this for debugging. Never, ever both! -->
+        <!-- <link rel="stylesheet" href="styles.css"> -->
+    </head>
+
+    <body>
+        <h1>Quick-and-Dirty Lights</h1>
+        <p>Change the colour with the sliders below!</p>
+        <p>
+            <p>
+                <label for="ledr">R</label>
+                <input type="range" class="rgbSlider" id="ledr" />
+                <input type="text" class="rgbText" id="ledrtext" />
+            </p>
+            <p>
+                <label for="ledg">G</label>
+                <input type="range" class="rgbSlider" id="ledg" />
+                <input type="text" class="rgbText" id="ledgtext" />
+            </p>
+            <p>
+                <label for="ledb">B</label>
+                <input type="range" class="rgbSlider" id="ledb" />
+                <input type="text" class="rgbText" id="ledbtext" />
+            </p>
+        </p>
+        <p>
+            <input type="button" class="buttonNavigation" id="config" onclick="location.href='/config';" value="Config">
+            <input type="button" class="buttonNavigation" id="config" onclick="location.href='/save';" value="Save LED colours">
+        </p>
+    </body>
+</html>
