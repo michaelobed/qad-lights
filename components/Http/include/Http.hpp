@@ -32,22 +32,6 @@ class Http
         httpd_handle_t handle;
 
         /* URIs. */
-        httpd_uri_t uriIndexConfig =
-        {
-            .uri = "/config",
-            .method = HTTP_GET,
-            .handler = nullptr,
-            .user_ctx = nullptr
-        };
-        
-        httpd_uri_t uriIndexConfigSubmit =
-        {
-            .uri = "/config",
-            .method = HTTP_POST,
-            .handler = nullptr,
-            .user_ctx = nullptr
-        };
-
         httpd_uri_t uriIndexHome =
         {
             .uri = "/",

@@ -9,22 +9,18 @@
 #include "Http.hpp"
 #include "Lighting.hpp"
 
-extern const char htmlConfig[] asm("_binary_config_html_start");
 extern const char htmlHome[] asm("_binary_home_html_start");
 extern const char htmlStyles[] asm("_binary_styles_css_start");
 
 static Lighting& lighting = Lighting::GetInstance();
 
 static esp_err_t onUriGet(httpd_req_t* request);
-static esp_err_t onUriPost(httpd_req_t* request);
 
 Http::Http()
 {
     handle = nullptr;
     memset(Buffer, 0, BufferSize);
 
-    uriIndexConfig.handler = onUriGet;
-    uriIndexConfigSubmit.handler = onUriPost;
     uriIndexHome.handler = onUriGet;
 }
 
@@ -58,8 +54,6 @@ esp_err_t Http::Init()
 
     /* Start httpd and register URIs. */
     return (    httpd_start(&handle, &httpConfig) |
-                httpd_register_uri_handler(handle, &uriIndexConfig) |
-                httpd_register_uri_handler(handle, &uriIndexConfigSubmit) |
                 httpd_register_uri_handler(handle, &uriIndexHome));
 }
 
@@ -91,18 +85,6 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 esp_err_t onUriGet(httpd_req_t* request)
 {
     Http& http = Http::GetInstance();
-    char* toServe = nullptr;
 
-    /* What page are we serving? */
-    if(strstr(request->uri, "config") != nullptr)
-        toServe = (char*)htmlConfig;
-    else toServe = (char*)htmlHome;
-
-    return http.SendPage(request, toServe);
-}
-
-esp_err_t onUriPost(httpd_req_t* request)
-{
-    /* TODO. */
-    return ESP_OK;
+    return http.SendPage(request, (char*)htmlHome);
 }

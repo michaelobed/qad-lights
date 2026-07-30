@@ -1,4 +1,4 @@
-text, td {
+p, text, td {
     font-family: trebuchet ms;
     color: black;
 }
@@ -6,7 +6,6 @@ text, td {
 body {
     background-color: dimgrey;
 }
-
 
 h1 {
     font-size: 60;
@@ -46,7 +45,7 @@ td {
     padding: 20px;
 }
 
-.rgbSlider {
+.rgbSlider, select {
     margin-left: 20px;
     width: 200px;
 }

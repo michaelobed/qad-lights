@@ -12,29 +12,90 @@
         <!-- <link rel="stylesheet" href="styles.css"> -->
     </head>
 
-    <body>
+    <body onload="configureHiding()">
         <h1>Quick-and-Dirty Lights</h1>
-        <p>Change the colour with the sliders below!</p>
+        <h2>Colours</h2>
         <p>
             <p>
                 <label for="ledr">R</label>
-                <input type="range" class="rgbSlider" id="ledr" />
-                <input type="text" class="rgbText" id="ledrtext" />
+                <input type="range" class="rgbSlider" id="ledr" min="0" max="255" value="127" oninput="onRgbSlider(this, ledrtext);" />
+                <input type="number" class="rgbText" id="ledrtext" min="0" max="255" value="127" oninput="onRgbText(this, ledr);" />
             </p>
             <p>
                 <label for="ledg">G</label>
-                <input type="range" class="rgbSlider" id="ledg" />
-                <input type="text" class="rgbText" id="ledgtext" />
+                <input type="range" class="rgbSlider" id="ledg" min="0" max="255" value="127" oninput="onRgbSlider(this, ledgtext);" />
+                <input type="number" class="rgbText" id="ledgtext" min="0" max="255" value="127" />
             </p>
             <p>
                 <label for="ledb">B</label>
-                <input type="range" class="rgbSlider" id="ledb" />
-                <input type="text" class="rgbText" id="ledbtext" />
+                <input type="range" class="rgbSlider" id="ledb" min="0" max="255" value="127" oninput="onRgbSlider(this, ledbtext);" />
+                <input type="number" class="rgbText" id="ledbtext" min="0" max="255" value="127" />
+            </p>
+            <!-- TODO: onclick for ledsave -->
+            <p><input type="button" class="buttonNavigation" id="ledsave" value="Save LED colours"></p>
+        </p>
+
+        <h2>Behaviour</h2>
+        <p>
+            <p>
+                <label for="ledmode">LED mode</label>
+                <select id="ledmode" onchange="onLedMode();">
+                    <option value="off">Off</option>
+                    <option value="onany">On when any switch is active</option>
+                    <option value="onall">On when all switches are active</option>
+                    <option value="on">On always</option>
+                </select>
+            </p>
+            <p>
+                <label for="swpol" id="swpollabel">Switch polarity</label>
+                <select id="swpol">
+                    <option value="no">Normally open</option>
+                    <option value="nc">Normally closed</option>
+                </select>
             </p>
         </p>
+
+        <h2>Network</h2>
         <p>
-            <input type="button" class="buttonNavigation" id="config" onclick="location.href='/config';" value="Config">
-            <input type="button" class="buttonNavigation" id="config" onclick="location.href='/save';" value="Save LED colours">
+            <label for="wifimode">WiFi mode</label>
+            <select id="wifimode" onchange="onWifiMode();">
+                <option value="ap">Access point</option>
+                <option value="sta">Connect to network</option>
+            </select>
+            <p id="wifisearchhider">
+                <input type="button" class="buttonNavigation" id="wifisearch" value="Search for networks" onclick="location.href='/wifisearch';"/>
+            </p>
         </p>
+
+        <script>
+            function configureHiding() {
+                onLedMode();
+                onWifiMode();
+            }
+
+            function onLedMode() {
+                var swpol = document.getElementById("swpol");
+                var swpolLabel = document.getElementById("swpollabel");
+                var shouldHide = (document.getElementById("ledmode").value == "off");
+                
+                swpol.hidden = shouldHide;
+                swpolLabel.hidden = shouldHide;
+            }
+
+            function onRgbSlider(slider, text) {
+                text.value = slider.value;
+            }
+
+            function onRgbText(text, slider) {
+                slider.value = text.value;
+            }
+
+            function onWifiMode() {
+                var wifiSearchHider = document.getElementById("wifisearchhider");
+                var shouldHide = (document.getElementById("wifimode").value == "ap");
+
+                wifiSearchHider.hidden = shouldHide;
+            }
+        </script>
     </body>
 </html>
