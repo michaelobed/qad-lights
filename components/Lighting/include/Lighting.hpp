@@ -26,10 +26,10 @@ class Lighting
         esp_err_t Init();
         void Off();
         void On();
-        void SetColour(uint8_t r, uint8_t g, uint8_t b);
+        void SetColour(uint32_t colour);    /* Stored as 0xXXRRGGBB. */
 
     private:
-        uint8_t colour[3];
+        uint8_t colour[3];                  /* 0 = r, 1 = g, 2 = b. */
         int fadeTimeMs;
         int fadeTimeMsOff;
         bool on;

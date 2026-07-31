@@ -15,6 +15,14 @@
 class Config
 {
     public:
+        enum LEDMode : uint8_t
+        {
+            LEDMode_Off = 0,            /* Permanently off. */
+            LEDMode_OnAny,              /* On if any switches are active. */
+            LEDMode_OnAll,              /* On if all switches are active. */
+            LEDMode_On                  /* Permanently on. */
+        };
+
         Config();
 
         static Config& GetInstance()
@@ -22,9 +30,9 @@ class Config
             static Config c;
             return c;
         }
-
         
         uint32_t LightingColour;
+        int LightingMode;
         static constexpr size_t NameMaxLen = 128;
         char Name[NameMaxLen];
         bool NetworkIsSTA;
@@ -48,10 +56,11 @@ class Config
         static constexpr uint32_t existenceNum = 0x99ef0b05;
         nvs_handle_t handle;
 
-        static constexpr int dataMaxLen = 5;
+        static constexpr int dataMaxLen = 6;
         ConfigData data[dataMaxLen] =
         {
             {   "lightingColour", &LightingColour, 4 },
+            {   "lightingMode",   &LightingMode,   1 },
             {   "name",           Name,            NameMaxLen },
             {   "networkIsSTA",   &NetworkIsSTA,   1 },
             {   "networkPsk",     &NetworkPsk,     MAX_PASSPHRASE_LEN },

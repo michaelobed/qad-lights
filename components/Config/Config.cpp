@@ -14,6 +14,7 @@ Config::Config()
 {
     /* Default values go here. */
     LightingColour = 0xffffff;
+    LightingMode = LEDMode_On;
     strncpy(Name, "My QAD Lights", NameMaxLen);
     NetworkIsSTA = false;
     strncpy(NetworkSsid, "YourNetworkHere", MAX_SSID_LEN);

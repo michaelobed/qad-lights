@@ -6,9 +6,12 @@
 //  
 //  Copyright © 2026 Michael Obed.
 
+#include "Config.hpp"
 #include <cstring>
 #include "esp_log.h"
 #include "Lighting.hpp"
+
+static Config& config = Config::GetInstance();
 
 Lighting::Lighting()
 {
@@ -89,28 +92,35 @@ esp_err_t Lighting::Init()
         return err;
     }
 
-    Off();
+    SetColour(config.LightingColour);
+
+    /* If permanently on, deal with that now. */
+    if(config.LightingMode == Config::LEDMode_On)
+        On();
+    
     return err;
 }
 
 void Lighting::Off()
 {
+    ESP_LOGI(__func__, "Turning lights off...");
     on = false;
     doChange(0x00, 0x00, 0x00, fadeTimeMsOff);
 }
 
 void Lighting::On()
 {
+    ESP_LOGI(__func__, "Turning lights on...");
     on = true;
     doChange(colour[0], colour[1], colour[2], fadeTimeMs);
 }
 
-void Lighting::SetColour(uint8_t r, uint8_t g, uint8_t b)
+void Lighting::SetColour(uint32_t rgb)
 {
-    colour[0] = r;
-    colour[1] = g;
-    colour[2] = b;
+    colour[0] = (rgb >> 16) & 0xff;
+    colour[1] = (rgb >> 8) & 0xff;;
+    colour[2] = rgb & 0xff;
 
     if(on)
-        doChange(r, g, b, fadeTimeMs);
+        doChange(colour[0], colour[1], colour[2], fadeTimeMs);
 }
