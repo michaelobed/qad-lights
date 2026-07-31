@@ -6,12 +6,14 @@
 //  
 //  Copyright © 2026 Michael Obed.
 
+#include "Config.hpp"
 #include "Http.hpp"
 #include "Lighting.hpp"
 
 extern const char htmlHome[] asm("_binary_home_html_start");
 extern const char htmlStyles[] asm("_binary_styles_css_start");
 
+static Config& config = Config::GetInstance();
 static Lighting& lighting = Lighting::GetInstance();
 
 static esp_err_t onUriGet(httpd_req_t* request);
@@ -32,14 +34,19 @@ char* Http::doReplacement(char* html, const char* toLookFor, const char* toRepla
     int toReplaceItWithSize = strlen(toReplaceItWith);
     
     /* Look for the tag. */
-    tag = strstr(html, toLookFor);
-    if(tag != nullptr)
+    tag = html;
+    while(tag != nullptr)
     {
-        /* Copy everything until just before the tag, then replace it with the contents of toReplaceItWith. */
-        tagLocation = tag - html;
-        strncpy(Buffer, html, tagLocation);
-        strcpy(Buffer + tagLocation, toReplaceItWith);
-        strcpy(Buffer + tagLocation + toReplaceItWithSize, html + tagLocation + toLookForSize);
+        tag = strstr(tag, toLookFor);
+        if(tag != nullptr)
+        {
+            /* Copy everything until just before the tag, then replace it with the contents of toReplaceItWith. */
+            tagLocation = tag - html;
+            strncpy(Buffer, html, tagLocation);
+            strcpy(Buffer + tagLocation, toReplaceItWith);
+            strcpy(Buffer + tagLocation + toReplaceItWithSize, html + tagLocation + toLookForSize);
+            tag = Buffer;
+        }
     }
 
     return Buffer;
@@ -66,6 +73,7 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 {
     char* newHtml = nullptr;
     constexpr char tagStyles[] = "[[STYLES]]";
+    char tempBuf[64] = {};
 
     /* Import styles.css. */
     newHtml = doReplacement(page, tagStyles, htmlStyles);
@@ -74,7 +82,14 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
         onOops(request);
     else
     {
-        /* TODO: Replace other things as necessary. */
+        itoa((config.LightingColour >> 16) & 0xff, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_R]]", tempBuf);
+
+        itoa((config.LightingColour >> 8) & 0xff, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_G]]", tempBuf);
+
+        itoa(config.LightingColour & 0xff, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_B]]", tempBuf);
 
         httpd_resp_send(request, newHtml, HTTPD_RESP_USE_STRLEN);
     }

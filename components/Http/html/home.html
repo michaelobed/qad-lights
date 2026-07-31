@@ -18,18 +18,18 @@
         <p>
             <p>
                 <label for="ledr">R</label>
-                <input type="range" class="rgbSlider" id="ledr" min="0" max="255" value="127" oninput="onRgbSlider(this, ledrtext);" />
-                <input type="number" class="rgbText" id="ledrtext" min="0" max="255" value="127" oninput="onRgbText(this, ledr);" />
+                <input type="range" class="rgbSlider" id="ledr" min="0" max="255" value="[[CONFIG_LIGHTINGCOLOUR_R]]" oninput="onRgbSlider(this, ledrtext);" />
+                <input type="number" class="rgbText" id="ledrtext" min="0" max="255" value="[[CONFIG_LIGHTINGCOLOUR_R]]" oninput="onRgbText(this, ledr);" />
             </p>
             <p>
                 <label for="ledg">G</label>
-                <input type="range" class="rgbSlider" id="ledg" min="0" max="255" value="127" oninput="onRgbSlider(this, ledgtext);" />
-                <input type="number" class="rgbText" id="ledgtext" min="0" max="255" value="127" />
+                <input type="range" class="rgbSlider" id="ledg" min="0" max="255" value="[[CONFIG_LIGHTINGCOLOUR_G]]" oninput="onRgbSlider(this, ledgtext);" />
+                <input type="number" class="rgbText" id="ledgtext" min="0" max="255" value="[[CONFIG_LIGHTINGCOLOUR_G]]" />
             </p>
             <p>
                 <label for="ledb">B</label>
-                <input type="range" class="rgbSlider" id="ledb" min="0" max="255" value="127" oninput="onRgbSlider(this, ledbtext);" />
-                <input type="number" class="rgbText" id="ledbtext" min="0" max="255" value="127" />
+                <input type="range" class="rgbSlider" id="ledb" min="0" max="255" value="[[CONFIG_LIGHTINGCOLOUR_B]]" oninput="onRgbSlider(this, ledbtext);" />
+                <input type="number" class="rgbText" id="ledbtext" min="0" max="255" value="[[CONFIG_LIGHTINGCOLOUR_B]]" />
             </p>
             <!-- TODO: onclick for ledsave -->
             <p><input type="button" class="buttonNavigation" id="ledsave" value="Save LED colours"></p>
