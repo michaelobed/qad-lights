@@ -15,6 +15,14 @@
 class Config
 {
     public:
+        struct ConfigData
+        {
+            static constexpr int tagMaxLen = 32;
+            char tag[tagMaxLen];
+            void* data;
+            size_t size;
+        };
+
         enum LEDMode : uint8_t
         {
             LEDMode_Off = 0,            /* Permanently off. */
@@ -31,6 +39,7 @@ class Config
             return c;
         }
         
+        static constexpr int DataMapMaxLen = 6;
         uint32_t LightingColour;
         int LightingMode;
         static constexpr size_t NameMaxLen = 128;
@@ -39,25 +48,7 @@ class Config
         char NetworkPsk[MAX_PASSPHRASE_LEN];
         char NetworkSsid[MAX_SSID_LEN];
 
-        void EraseAll();
-        esp_err_t InitStorage();
-        esp_err_t Load();
-        void Save();
-
-    private:
-        static constexpr int tagMaxLen = 32;
-        struct ConfigData
-        {
-            char tag[tagMaxLen];
-            void* data;
-            size_t size;
-        };
-
-        static constexpr uint32_t existenceNum = 0x99ef0b05;
-        nvs_handle_t handle;
-
-        static constexpr int dataMaxLen = 6;
-        ConfigData data[dataMaxLen] =
+        ConfigData DataMap[DataMapMaxLen] =
         {
             {   "lightingColour", &LightingColour, 4 },
             {   "lightingMode",   &LightingMode,   1 },
@@ -66,6 +57,15 @@ class Config
             {   "networkPsk",     &NetworkPsk,     MAX_PASSPHRASE_LEN },
             {   "networkSsid",    &NetworkSsid,    MAX_SSID_LEN }
         };
+
+        void EraseAll();
+        esp_err_t InitStorage();
+        esp_err_t Load();
+        void Save();
+
+    private:
+        static constexpr uint32_t existenceNum = 0x99ef0b05;
+        nvs_handle_t handle;
 };
 
 #endif

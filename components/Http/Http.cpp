@@ -21,7 +21,7 @@ Http::Http()
     handle = nullptr;
     memset(Buffer, 0, BufferSize);
 
-    uriIndexHome.handler = onUriGet;
+    uriHome.handler = onUriGet;
 }
 
 char* Http::doReplacement(char* html, const char* toLookFor, const char* toReplaceItWith)
@@ -54,7 +54,7 @@ esp_err_t Http::Init()
 
     /* Start httpd and register URIs. */
     return (    httpd_start(&handle, &httpConfig) |
-                httpd_register_uri_handler(handle, &uriIndexHome));
+                httpd_register_uri_handler(handle, &uriHome));
 }
 
 void Http::onOops(httpd_req_t* request)

@@ -63,31 +63,31 @@ esp_err_t Config::Load()
         return ESP_FAIL;
 
     /* If we do, grab all the config data. */
-    for(int i = 0; i < dataMaxLen; i++)
+    for(int i = 0; i < DataMapMaxLen; i++)
     {
-        switch(data[i].size)
+        switch(DataMap[i].size)
         {
             case 1:
-                err = nvs_get_u8(handle, data[i].tag, static_cast<uint8_t*>(data[i].data));
+                err = nvs_get_u8(handle, DataMap[i].tag, static_cast<uint8_t*>(DataMap[i].data));
                 break;
 
             case 2:
-                err = nvs_get_u16(handle, data[i].tag, static_cast<uint16_t*>(data[i].data));
+                err = nvs_get_u16(handle, DataMap[i].tag, static_cast<uint16_t*>(DataMap[i].data));
                 break;
 
             case 4:
-                err = nvs_get_u32(handle, data[i].tag, static_cast<uint32_t*>(data[i].data));
+                err = nvs_get_u32(handle, DataMap[i].tag, static_cast<uint32_t*>(DataMap[i].data));
                 break;
 
             default:
-                size = data[i].size;
-                err = nvs_get_str(handle, data[i].tag, static_cast<char*>(data[i].data), &size);
+                size = DataMap[i].size;
+                err = nvs_get_str(handle, DataMap[i].tag, static_cast<char*>(DataMap[i].data), &size);
                 break;
         }
 
         if(err != ESP_OK)
         {
-            ESP_LOGE(__func__, "Could not load config data \"%s\" (%d)!", data[i].tag, err);
+            ESP_LOGE(__func__, "Could not load config data \"%s\" (%d)!", DataMap[i].tag, err);
             break;
         }
     }
@@ -99,24 +99,24 @@ void Config::Save()
 {
     nvs_set_u32(handle, "existence", existenceNum);
 
-    for(int i = 0; i < dataMaxLen; i++)
+    for(int i = 0; i < DataMapMaxLen; i++)
     {
-        switch(data[i].size)
+        switch(DataMap[i].size)
         {
             case 1:
-                nvs_set_u8(handle, data[i].tag, *static_cast<uint8_t*>(data[i].data));
+                nvs_set_u8(handle, DataMap[i].tag, *static_cast<uint8_t*>(DataMap[i].data));
                 break;
 
             case 2:
-                nvs_set_u16(handle, data[i].tag, *static_cast<uint16_t*>(data[i].data));
+                nvs_set_u16(handle, DataMap[i].tag, *static_cast<uint16_t*>(DataMap[i].data));
                 break;
 
             case 4:
-                nvs_set_u32(handle, data[i].tag, *static_cast<uint32_t*>(data[i].data));
+                nvs_set_u32(handle, DataMap[i].tag, *static_cast<uint32_t*>(DataMap[i].data));
                 break;
 
             default:
-                nvs_set_str(handle, data[i].tag, static_cast<char*>(data[i].data));
+                nvs_set_str(handle, DataMap[i].tag, static_cast<char*>(DataMap[i].data));
                 break;
         }
     }

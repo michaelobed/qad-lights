@@ -32,7 +32,7 @@ class Http
         httpd_handle_t handle;
 
         /* URIs. */
-        httpd_uri_t uriIndexHome =
+        httpd_uri_t uriHome =
         {
             .uri = "/",
             .method = HTTP_GET,

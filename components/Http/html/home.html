@@ -12,7 +12,7 @@
         <!-- <link rel="stylesheet" href="styles.css"> -->
     </head>
 
-    <body onload="configureHiding()">
+    <body onload="onLoad()">
         <h1>Quick-and-Dirty Lights</h1>
         <h2>Colours</h2>
         <p>
@@ -68,11 +68,6 @@
         </p>
 
         <script>
-            function configureHiding() {
-                onLedMode();
-                onWifiMode();
-            }
-
             function onLedMode() {
                 var swpol = document.getElementById("swpol");
                 var swpolLabel = document.getElementById("swpollabel");
@@ -80,6 +75,11 @@
                 
                 swpol.hidden = shouldHide;
                 swpolLabel.hidden = shouldHide;
+            }
+
+            function onLoad() {
+                onLedMode();
+                onWifiMode();
             }
 
             function onRgbSlider(slider, text) {
