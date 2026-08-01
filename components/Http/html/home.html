@@ -12,7 +12,7 @@
         <!-- <link rel="stylesheet" href="styles.css"> -->
     </head>
 
-    <body onload="onLoad()">
+    <body onload="onLoad()" onunload="onUnload()">
         <h1>Quick-and-Dirty Lights</h1>
         <h2>Colours</h2>
         <p>
@@ -31,8 +31,6 @@
                 <input type="range" class="rgbSlider" id="ledb" min="0" max="255" value="[[CONFIG_LIGHTINGCOLOUR_B]]" oninput="onRgbSlider(this, ledbtext);" />
                 <input type="number" class="rgbText" id="ledbtext" min="0" max="255" value="[[CONFIG_LIGHTINGCOLOUR_B]]" />
             </p>
-            <!-- TODO: onclick for ledsave -->
-            <p><input type="button" class="buttonNavigation" id="ledsave" value="Save LED colours"></p>
         </p>
 
         <h2>Behaviour</h2>
@@ -67,27 +65,53 @@
             </p>
         </p>
 
+        <p><input type="button" class="buttonNavigation" id="save" value="Save settings" onclick="onSaveSettings();"></p>
+
         <script>
-            function onLedMode() {
+            const pingInterval = 1000;
+
+            /* Start websocket client and set up event listeners. */
+            const ws = new WebSocket("ws://qad-lights.local/ws");
+
+            ws.addEventListener("error", (event) => {
+                console.error("Websocket gave error:", event);
+            });
+
+            function onLedMode(fromUI) {
+                var ledMode = document.getElementById("ledmode").value;
                 var swpol = document.getElementById("swpol");
                 var swpolLabel = document.getElementById("swpollabel");
-                var shouldHide = (document.getElementById("ledmode").value == "off");
+                var shouldHide = (ledMode == "off");
                 
                 swpol.hidden = shouldHide;
                 swpolLabel.hidden = shouldHide;
+
+                if(fromUI)
+                    ws.send(`lightingMode: ${ledMode}`);
             }
 
             function onLoad() {
-                onLedMode();
+                onLedMode(false);
                 onWifiMode();
             }
 
             function onRgbSlider(slider, text) {
                 text.value = slider.value;
+
+                var colour = (ledr.value << 16) | (ledg.value << 8) | (ledb.value);
+                ws.send(`lightingColour: ${colour}`);
             }
 
             function onRgbText(text, slider) {
                 slider.value = text.value;
+            }
+
+            function onSaveSettings() {
+                ws.send("save");
+            }
+
+            function onUnload() {
+                ws.close();
             }
 
             function onWifiMode() {

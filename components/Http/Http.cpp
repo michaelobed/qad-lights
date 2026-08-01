@@ -7,6 +7,7 @@
 //  Copyright © 2026 Michael Obed.
 
 #include "Config.hpp"
+#include "esp_log.h"
 #include "Http.hpp"
 #include "Lighting.hpp"
 
@@ -17,6 +18,7 @@ static Config& config = Config::GetInstance();
 static Lighting& lighting = Lighting::GetInstance();
 
 static esp_err_t onUriGet(httpd_req_t* request);
+static esp_err_t onWs(httpd_req_t* request);
 
 Http::Http()
 {
@@ -24,6 +26,7 @@ Http::Http()
     memset(Buffer, 0, BufferSize);
 
     uriHome.handler = onUriGet;
+    uriWs.handler = onWs;
 }
 
 char* Http::doReplacement(char* html, const char* toLookFor, const char* toReplaceItWith)
@@ -52,6 +55,59 @@ char* Http::doReplacement(char* html, const char* toLookFor, const char* toRepla
     return Buffer;
 }
 
+bool Http::HandleWs(char* data, size_t length)
+{
+    char* dataStart = nullptr;
+    const char saveTag[] = "save";
+
+    /* Handle saving first since that isn't dependent on config tags. */
+    if(strstr(data, saveTag) != nullptr)
+    {
+        config.Save();
+        return true;
+    }
+
+    /* Otherwise, we are looking for exactly one tag which should be identical to that of the Config data.
+     * If it isn't, it's invalid. */
+    for(int i = 0; i < Config::DataMapMaxLen; i++)
+    {
+        if(strstr(data, config.DataMap[i].tag) != nullptr)
+        {
+            /* Look for a ": ". Anything after that is the data we seek. */
+            dataStart = strstr(data, ": ");
+            if(dataStart != nullptr)
+            {
+                switch(config.DataMap[i].size)
+                {
+                    case 1:
+                        *(uint8_t*)config.DataMap[i].data = atoi(dataStart);
+                        break;
+
+                    case 2:
+                        *(uint16_t*)config.DataMap[i].data = atoi(dataStart);
+                        break;
+
+                    case 4:
+                        *(uint32_t*)config.DataMap[i].data = atoi(dataStart);
+                        break;
+
+                    /* This'll be a string. */
+                    default:
+                        strncpy(static_cast<char*>(config.DataMap[i].data), dataStart, config.DataMap[i].size);
+                        break;
+                }
+
+                /* If it was a lighting change, handle that. */
+                if(strstr(data, "lightingColour") != nullptr)
+                    lighting.SetColour(atoi(dataStart));
+            }
+            return true;
+        }
+    }
+
+    return false;
+}
+
 esp_err_t Http::Init()
 {
     httpd_config_t httpConfig = HTTPD_DEFAULT_CONFIG();
@@ -61,7 +117,8 @@ esp_err_t Http::Init()
 
     /* Start httpd and register URIs. */
     return (    httpd_start(&handle, &httpConfig) |
-                httpd_register_uri_handler(handle, &uriHome));
+                httpd_register_uri_handler(handle, &uriHome) |
+                httpd_register_uri_handler(handle, &uriWs));
 }
 
 void Http::onOops(httpd_req_t* request)
@@ -99,7 +156,52 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 
 esp_err_t onUriGet(httpd_req_t* request)
 {
-    Http& http = Http::GetInstance();
+    return Http::GetInstance().SendPage(request, (char*)htmlHome);
+}
 
-    return http.SendPage(request, (char*)htmlHome);
+esp_err_t onWs(httpd_req_t* request)
+{
+    esp_err_t err = ESP_OK;
+    uint8_t* rxBuf = nullptr;
+    httpd_ws_frame_t wsFrame;
+
+    memset(&wsFrame, 0, sizeof(httpd_ws_frame_t));
+    wsFrame.type = HTTPD_WS_TYPE_TEXT;
+
+    /* Get frame length. Returned value is exclusive of null terminator. */
+    err = httpd_ws_recv_frame(request, &wsFrame, 0);
+    if(err != ESP_OK)
+    {
+        ESP_LOGE(__func__, "Could not get WS frame length (%d)!", err);
+        return err;
+    }
+    else ESP_LOGI(__func__, "Got frame length %d.", wsFrame.len);
+    
+    /* Allocate the buffer and receive. */
+    rxBuf = new uint8_t[wsFrame.len + 1];
+    if(rxBuf == nullptr)
+    {
+        ESP_LOGE(__func__, "Could not allocate memory!");
+        return ESP_ERR_NO_MEM;
+    }
+    memset(rxBuf, 0, wsFrame.len + 1);
+
+    wsFrame.payload = rxBuf;
+    err = httpd_ws_recv_frame(request, &wsFrame, wsFrame.len);
+    if(err != ESP_OK)
+        ESP_LOGE(__func__, "Could not receive WS frame (%d)!", err);
+    else
+    {
+        ESP_LOG_BUFFER_HEXDUMP(__func__, rxBuf, wsFrame.len, ESP_LOG_INFO);
+
+        /* Handle the data. */
+        if(!Http::GetInstance().HandleWs((char*)rxBuf, wsFrame.len))
+        {
+            ESP_LOGE(__func__, "Invalid payload!");
+            err = ESP_ERR_INVALID_RESPONSE;
+        }
+    }
+
+    delete[] rxBuf;
+    return err;
 }
