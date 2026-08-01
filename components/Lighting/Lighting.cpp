@@ -16,20 +16,30 @@ static Config& config = Config::GetInstance();
 Lighting::Lighting()
 {
     memset(colour, 0xff, 3);
-    fadeTimeMs = 500;
+    fadeTimeMsChange = 100;
+    fadeTimeMsOn = 500;
     fadeTimeMsOff = 250;
     on = false;
 }
 
-void Lighting::doChange(uint8_t r, uint8_t g, uint8_t b, int fadeTime)
+void Lighting::doChange(uint8_t r, uint8_t g, uint8_t b, int fadeTime, bool fade)
 {
-    ledc_set_fade_with_time(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, r, fadeTime);
-    ledc_set_fade_with_time(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, g, fadeTime);
-    ledc_set_fade_with_time(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_2, b, fadeTime);
+    if(fade)
+    {
+        ledc_set_fade_with_time(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, r, fadeTime);
+        ledc_set_fade_with_time(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, g, fadeTime);
+        ledc_set_fade_with_time(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_2, b, fadeTime);
 
-    ledc_fade_start(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, LEDC_FADE_NO_WAIT);
-    ledc_fade_start(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, LEDC_FADE_NO_WAIT);
-    ledc_fade_start(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_2, LEDC_FADE_NO_WAIT);
+        ledc_fade_start(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, LEDC_FADE_NO_WAIT);
+        ledc_fade_start(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, LEDC_FADE_NO_WAIT);
+        ledc_fade_start(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_2, LEDC_FADE_NO_WAIT);
+    }
+    else
+    {
+        ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, r, 0);
+        ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1, g, 0);
+        ledc_set_duty_and_update(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_2, b, 0);
+    }
 }
 
 esp_err_t Lighting::Init()
@@ -43,7 +53,9 @@ esp_err_t Lighting::Init()
         .timer_sel = LEDC_TIMER_0,
         .duty = 0,
         .hpoint = 0,
-        .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD
+        .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+        .flags = 0,
+        .deconfigure = false
     };
 
     ledc_timer_config_t configTimer =
@@ -105,22 +117,22 @@ void Lighting::Off()
 {
     ESP_LOGI(__func__, "Turning lights off...");
     on = false;
-    doChange(0x00, 0x00, 0x00, fadeTimeMsOff);
+    doChange(0x00, 0x00, 0x00, fadeTimeMsOff, true);
 }
 
 void Lighting::On()
 {
     ESP_LOGI(__func__, "Turning lights on...");
     on = true;
-    doChange(colour[0], colour[1], colour[2], fadeTimeMs);
+    doChange(colour[0], colour[1], colour[2], fadeTimeMsOn, true);
 }
 
-void Lighting::SetColour(uint32_t rgb)
+void Lighting::SetColour(uint32_t rgb, bool fade)
 {
     colour[0] = (rgb >> 16) & 0xff;
     colour[1] = (rgb >> 8) & 0xff;;
     colour[2] = rgb & 0xff;
 
     if(on)
-        doChange(colour[0], colour[1], colour[2], fadeTimeMs);
+        doChange(colour[0], colour[1], colour[2], fadeTimeMsChange, fade);
 }

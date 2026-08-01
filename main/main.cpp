@@ -46,7 +46,7 @@ extern "C" void app_main()
     err = config.Load();
     if(err != ESP_OK)
     {
-        ESP_LOGW(__func__, "Config did not exist. Saving afresh...");
+        ESP_LOGW(__func__, "Config did not exist or was corrupted. Saving afresh...");
         config.Save();
     }
     else ESP_LOGI(__func__, "Config loaded successfully.");

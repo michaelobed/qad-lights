@@ -26,18 +26,19 @@ class Lighting
         esp_err_t Init();
         void Off();
         void On();
-        void SetColour(uint32_t colour);    /* Stored as 0xXXRRGGBB. */
+        void SetColour(uint32_t colour, bool fade = true);      /* Stored as 0xXXRRGGBB. */
 
     private:
-        uint8_t colour[3];                  /* 0 = r, 1 = g, 2 = b. */
-        int fadeTimeMs;
+        uint8_t colour[3];                                      /* 0 = r, 1 = g, 2 = b. */
+        int fadeTimeMsChange;
         int fadeTimeMsOff;
+        int fadeTimeMsOn;
         bool on;
         static constexpr int pinB = 4;
         static constexpr int pinG = 0;
         static constexpr int pinR = 2;
 
-        void doChange(uint8_t r, uint8_t g, uint8_t b, int fadeTime);
+        void doChange(uint8_t r, uint8_t g, uint8_t b, int fadeTime, bool fade);
 };
 
 #endif

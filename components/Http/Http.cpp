@@ -64,6 +64,7 @@ bool Http::HandleWs(char* data, size_t length)
     if(strstr(data, saveTag) != nullptr)
     {
         config.Save();
+        ESP_LOGI(__func__, "Config saved.");
         return true;
     }
 
@@ -77,6 +78,7 @@ bool Http::HandleWs(char* data, size_t length)
             dataStart = strstr(data, ": ");
             if(dataStart != nullptr)
             {
+                dataStart += 2;
                 switch(config.DataMap[i].size)
                 {
                     case 1:
@@ -99,7 +101,21 @@ bool Http::HandleWs(char* data, size_t length)
 
                 /* If it was a lighting change, handle that. */
                 if(strstr(data, "lightingColour") != nullptr)
-                    lighting.SetColour(atoi(dataStart));
+                    lighting.SetColour(atoi(dataStart), false);
+                else if(strstr(data, "lightingMode") != nullptr)
+                {
+                    /* TODO: Handle other modes. */
+                    switch(config.LightingMode)
+                    {
+                        case Config::LEDMode_Off:
+                            lighting.Off();
+                            break;
+
+                        case Config::LEDMode_On:
+                            lighting.On();
+                            break;
+                    }
+                }
             }
             return true;
         }
@@ -175,7 +191,6 @@ esp_err_t onWs(httpd_req_t* request)
         ESP_LOGE(__func__, "Could not get WS frame length (%d)!", err);
         return err;
     }
-    else ESP_LOGI(__func__, "Got frame length %d.", wsFrame.len);
     
     /* Allocate the buffer and receive. */
     rxBuf = new uint8_t[wsFrame.len + 1];
@@ -192,8 +207,6 @@ esp_err_t onWs(httpd_req_t* request)
         ESP_LOGE(__func__, "Could not receive WS frame (%d)!", err);
     else
     {
-        ESP_LOG_BUFFER_HEXDUMP(__func__, rxBuf, wsFrame.len, ESP_LOG_INFO);
-
         /* Handle the data. */
         if(!Http::GetInstance().HandleWs((char*)rxBuf, wsFrame.len))
         {

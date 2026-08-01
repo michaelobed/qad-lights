@@ -37,18 +37,18 @@
         <p>
             <p>
                 <label for="ledmode">LED mode</label>
-                <select id="ledmode" onchange="onLedMode();">
-                    <option value="off">Off</option>
-                    <option value="onany">On when any switch is active</option>
-                    <option value="onall">On when all switches are active</option>
-                    <option value="on">On always</option>
+                <select id="ledmode" onchange="onLedMode(true);">
+                    <option value="0">Off</option>
+                    <option value="1">On when any switch is active</option>
+                    <option value="2">On when all switches are active</option>
+                    <option value="3">On always</option>
                 </select>
             </p>
             <p>
                 <label for="swpol" id="swpollabel">Switch polarity</label>
                 <select id="swpol">
-                    <option value="no">Normally open</option>
-                    <option value="nc">Normally closed</option>
+                    <option value="0">Normally open</option>
+                    <option value="1">Normally closed</option>
                 </select>
             </p>
         </p>
@@ -68,9 +68,6 @@
         <p><input type="button" class="buttonNavigation" id="save" value="Save settings" onclick="onSaveSettings();"></p>
 
         <script>
-            const pingInterval = 1000;
-
-            /* Start websocket client and set up event listeners. */
             const ws = new WebSocket("ws://qad-lights.local/ws");
 
             ws.addEventListener("error", (event) => {
