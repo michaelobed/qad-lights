@@ -46,7 +46,7 @@
             </p>
             <p>
                 <label for="swpol" id="swpollabel">Switch polarity</label>
-                <select id="swpol">
+                <select id="swpol" onchange="onSwitchPolarity()">
                     <option value="0">Normally open</option>
                     <option value="1">Normally closed</option>
                 </select>
@@ -55,17 +55,21 @@
 
         <h2>Network</h2>
         <p>
+            <label for="hostname">Hostname</label>
+            <input type="text" class="textBox" value="[[CONFIG_HOSTNAME]]" oninput="onHostname();" />
+        </p>
+        <p>
             <label for="wifimode">WiFi mode</label>
             <select id="wifimode" onchange="onWifiMode();">
-                <option value="ap">Access point</option>
-                <option value="sta">Connect to network</option>
+                <option value="0">Access point</option>
+                <option value="1">Connect to network</option>
             </select>
             <p id="wifisearchhider">
-                <input type="button" class="buttonNavigation" id="wifisearch" value="Search for networks" onclick="location.href='/wifisearch';"/>
+                <input type="button" class="buttonNavigation" id="wifisearch" value="Search for networks" onclick="onWifiSearch(this);" />
             </p>
         </p>
 
-        <p><input type="button" class="buttonNavigation" id="save" value="Save settings" onclick="onSaveSettings();"></p>
+        <p><input type="button" class="buttonNavigation" id="save" value="Save settings to flash" onclick="onSaveSettings();"></p>
 
         <script>
             const ws = new WebSocket("ws://qad-lights.local/ws");
@@ -87,9 +91,19 @@
                     ws.send(`lightingMode: ${ledMode}`);
             }
 
+            function onHostname() {
+                var hostnameVal = document.getElementById("hostname").value;
+                ws.send(`hostname: ${hostnameVal}`);
+            }
+
             function onLoad() {
                 onLedMode(false);
                 onWifiMode();
+
+                /* We have to set the values of the dropdowns here because doing it in HTML is nasty. */
+                document.getElementById("ledmode").value = "[[CONFIG_LIGHTINGMODE]]";
+                document.getElementById("wifimode").value = "[[CONFIG_WIFIMODE]]";
+                document.getElementById("swpol").value = "[[CONFIG_SWITCHPOLARITY]]";
             }
 
             function onRgbSlider(slider, text) {
@@ -107,15 +121,27 @@
                 ws.send("save");
             }
 
+            function onSwitchPolarity() {
+                var swPolVal = document.getElementById("swpol").value;
+                ws.send(`switchPolarity: ${swPolVal}`);
+            }
+
             function onUnload() {
                 ws.close();
             }
 
             function onWifiMode() {
                 var wifiSearchHider = document.getElementById("wifisearchhider");
-                var shouldHide = (document.getElementById("wifimode").value == "ap");
+                var shouldHide = (document.getElementById("wifimode").value == "0");
 
                 wifiSearchHider.hidden = shouldHide;
+            }
+
+            function onWifiSearch(button) {
+                button.disabled = true;
+                button.value = "Searching...";
+
+                ws.send("wifiSearch");
             }
         </script>
     </body>

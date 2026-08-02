@@ -102,20 +102,6 @@ bool Http::HandleWs(char* data, size_t length)
                 /* If it was a lighting change, handle that. */
                 if(strstr(data, "lightingColour") != nullptr)
                     lighting.SetColour(atoi(dataStart), false);
-                else if(strstr(data, "lightingMode") != nullptr)
-                {
-                    /* TODO: Handle other modes. */
-                    switch(config.LightingMode)
-                    {
-                        case Config::LEDMode_Off:
-                            lighting.Off();
-                            break;
-
-                        case Config::LEDMode_On:
-                            lighting.On();
-                            break;
-                    }
-                }
             }
             return true;
         }
@@ -155,6 +141,8 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
         onOops(request);
     else
     {
+        newHtml = doReplacement(newHtml, "[[CONFIG_HOSTNAME]]", config.Hostname);
+        
         itoa((config.LightingColour >> 16) & 0xff, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_R]]", tempBuf);
 
@@ -163,6 +151,15 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 
         itoa(config.LightingColour & 0xff, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_B]]", tempBuf);
+
+        itoa(config.LightingMode, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGMODE]]", tempBuf);
+        
+        itoa(config.SwitchPolarity, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[CONFIG_SWITCHPOLARITY]]", tempBuf);
+
+        itoa(config.NetworkIsSTA ? 1 : 0, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[CONFIG_WIFIMODE]]", tempBuf);
 
         httpd_resp_send(request, newHtml, HTTPD_RESP_USE_STRLEN);
     }

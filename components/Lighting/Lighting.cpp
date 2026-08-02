@@ -105,26 +105,8 @@ esp_err_t Lighting::Init()
     }
 
     SetColour(config.LightingColour);
-
-    /* If permanently on, deal with that now. */
-    if(config.LightingMode == Config::LEDMode_On)
-        On();
     
     return err;
-}
-
-void Lighting::Off()
-{
-    ESP_LOGI(__func__, "Turning lights off...");
-    on = false;
-    doChange(0x00, 0x00, 0x00, fadeTimeMsOff, true);
-}
-
-void Lighting::On()
-{
-    ESP_LOGI(__func__, "Turning lights on...");
-    on = true;
-    doChange(colour[0], colour[1], colour[2], fadeTimeMsOn, true);
 }
 
 void Lighting::SetColour(uint32_t rgb, bool fade)
@@ -135,4 +117,14 @@ void Lighting::SetColour(uint32_t rgb, bool fade)
 
     if(on)
         doChange(colour[0], colour[1], colour[2], fadeTimeMsChange, fade);
+}
+
+void Lighting::SetState(bool isOn)
+{
+    on = isOn;
+    ESP_LOGI(__func__, "Turning lights %s...", on ? "on" : "off");
+
+    if(on)
+        doChange(colour[0], colour[1], colour[2], fadeTimeMsOn, true);
+    else doChange(0x00, 0x00, 0x00, fadeTimeMsOff, true);
 }

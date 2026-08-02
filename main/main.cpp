@@ -12,14 +12,20 @@
 #include "Http.hpp"
 #include "Lighting.hpp"
 #include "Network.hpp"
+#include "SwitchIO.hpp"
 #include "freertos/task.h"
 
 static Config& config = Config::GetInstance();
 static Http& http = Http::GetInstance();
 static Lighting& lighting = Lighting::GetInstance();
+static volatile bool lightingState = false;
+static volatile bool lightingStateLast = false;
 static Network& network = Network::GetInstance();
+static SwitchIO& switchIo = SwitchIO::GetInstance();
+static TaskHandle_t switchIOTaskHandle = nullptr;
 
 static void errorHandler();
+static void switchIOTask(void* arg);
 
 extern "C" void app_main()
 {
@@ -50,6 +56,15 @@ extern "C" void app_main()
         config.Save();
     }
     else ESP_LOGI(__func__, "Config loaded successfully.");
+
+    /* Initialise switches and create background task. */
+    err = switchIo.Configure();
+    if(err != ESP_OK)
+    {
+        ESP_LOGE(__func__, "Could not configure switches (%d)!", err);
+        errorHandler();
+    }
+    xTaskCreate(switchIOTask, "SwitchIO", 2048, nullptr, tskIDLE_PRIORITY, &switchIOTaskHandle);
 
     /* Initialise the lighting driver. */
     err = lighting.Init();
@@ -99,4 +114,21 @@ void errorHandler()
 {
     /* Do nothing forever. */
     while(true);
+}
+
+void switchIOTask(void* arg)
+{
+    /* Fire every 100ms. */
+    while(true)
+    {
+        lightingState = switchIo.Update();
+        if(lightingState != lightingStateLast)
+        {
+            ESP_LOGI(__func__, "Lighting change detected!");
+            lighting.SetState(lightingState);
+            lightingStateLast = lightingState;
+        }
+
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
 }

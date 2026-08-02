@@ -31,6 +31,12 @@ class Config
             LEDMode_On                  /* Permanently on. */
         };
 
+        enum SwPol : uint8_t
+        {
+            SwPol_NormallyOpen = 0,
+            SwPol_NormallyClosed
+        };
+
         Config();
 
         static Config& GetInstance()
@@ -39,23 +45,25 @@ class Config
             return c;
         }
         
-        static constexpr int DataMapMaxLen = 6;
+        static constexpr int DataMapMaxLen = 7;
+        static constexpr size_t HostnameMaxLen = 128;
+        char Hostname[HostnameMaxLen];
         uint32_t LightingColour;
         int LightingMode;
-        static constexpr size_t NameMaxLen = 128;
-        char Name[NameMaxLen];
         bool NetworkIsSTA;
         char NetworkPsk[MAX_PASSPHRASE_LEN];
         char NetworkSsid[MAX_SSID_LEN];
+        int SwitchPolarity;
 
         ConfigData DataMap[DataMapMaxLen] =
         {
             {   "lightingColour", &LightingColour, 4 },
             {   "lightingMode",   &LightingMode,   1 },
-            {   "name",           Name,            NameMaxLen },
+            {   "hostname",       Hostname,        HostnameMaxLen },
             {   "networkIsSTA",   &NetworkIsSTA,   1 },
             {   "networkPsk",     &NetworkPsk,     MAX_PASSPHRASE_LEN },
-            {   "networkSsid",    &NetworkSsid,    MAX_SSID_LEN }
+            {   "networkSsid",    &NetworkSsid,    MAX_SSID_LEN },
+            {   "switchPolarity", &SwitchPolarity, 1}
         };
 
         void EraseAll();

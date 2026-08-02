@@ -1,3 +1,3 @@
 idf_component_register(SRCS "main.cpp"
                     INCLUDE_DIRS "."
-                    REQUIRES "Config" "Http" "Lighting" "Network")
+                    REQUIRES "Config" "Http" "Lighting" "Network" "SwitchIO")

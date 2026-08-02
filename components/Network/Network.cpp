@@ -82,7 +82,7 @@ esp_err_t Network::postInit()
     if(err != ESP_OK)
         return err;
     
-    mdns_hostname_set("qad-lights");
+    mdns_hostname_set(config.Hostname);
     mdns_service_add(nullptr, "_http", "_tcp", 80, nullptr, 0);
     mdns_service_instance_name_set("_http", "_tcp", "Quick-And-Dirty Lights");
     return ESP_OK;
