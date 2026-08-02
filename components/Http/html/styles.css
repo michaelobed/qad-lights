@@ -1,4 +1,4 @@
-p, text, td {
+p, text, td, tr, th {
     font-family: trebuchet ms;
     color: black;
 }
@@ -43,6 +43,18 @@ td {
     text-align: center;
     transition-duration: 0.4s;
     padding: 20px;
+}
+
+.buttonNetwork {
+    background-color: lightgrey;
+    border: 2px solid black;
+    border-radius: 10px;
+    display: inline-block;
+    font-family: trebuchet ms;
+    font-size: 12px;
+    text-align: center;
+    transition-duration: 0.4s;
+    padding: 15px;
 }
 
 .rgbSlider, select {

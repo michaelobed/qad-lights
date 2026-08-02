@@ -13,9 +13,11 @@
 
 extern const char htmlHome[] asm("_binary_home_html_start");
 extern const char htmlStyles[] asm("_binary_styles_css_start");
+extern const char htmlWifiSearch[] asm("_binary_wifisearch_html_start");
 
 static Config& config = Config::GetInstance();
 static Lighting& lighting = Lighting::GetInstance();
+static Network& network = Network::GetInstance();
 
 static esp_err_t onUriGet(httpd_req_t* request);
 static esp_err_t onWs(httpd_req_t* request);
@@ -26,6 +28,7 @@ Http::Http()
     memset(Buffer, 0, BufferSize);
 
     uriHome.handler = onUriGet;
+    uriWifiSearch.handler = onUriGet;
     uriWs.handler = onWs;
 }
 
@@ -58,13 +61,24 @@ char* Http::doReplacement(char* html, const char* toLookFor, const char* toRepla
 bool Http::HandleWs(char* data, size_t length)
 {
     char* dataStart = nullptr;
-    const char saveTag[] = "save";
+    esp_err_t err = ESP_OK;
+    const char tagSave[] = "save";
+    const char tagWifiSearch[] = "wifiSearch";
 
     /* Handle saving first since that isn't dependent on config tags. */
-    if(strstr(data, saveTag) != nullptr)
+    if(strstr(data, tagSave) != nullptr)
     {
         config.Save();
         ESP_LOGI(__func__, "Config saved.");
+        return true;
+    }
+
+    /* Then, handle starting a Wi-Fi scan. */
+    else if(strstr(data, tagWifiSearch) != nullptr)
+    {
+        err = network.StartSTASearch(networkList);
+        if(err != ESP_OK)
+            ESP_LOGE(__func__, "Could not perform WiFi network search (%d)!", err);
         return true;
     }
 
@@ -120,7 +134,41 @@ esp_err_t Http::Init()
     /* Start httpd and register URIs. */
     return (    httpd_start(&handle, &httpConfig) |
                 httpd_register_uri_handler(handle, &uriHome) |
+                httpd_register_uri_handler(handle, &uriWifiSearch) |
                 httpd_register_uri_handler(handle, &uriWs));
+}
+
+void Http::networkListAsTable(char* html, const char* tagText)
+{
+    constexpr int outSize = 2048;
+    char* out = new char[outSize];
+    int outCurrentLen = 0;
+    char* tag = nullptr;
+    char* tagStart = nullptr;
+
+    /* Add table header. */
+    sprintf(out, "<table><tr><th></th><th>Name</th><th>Needs password?</th></tr>");
+    outCurrentLen = strlen(out);
+
+    /* Prepare buttons and add an emoji when we need a PSK. */
+    for(int i = 0; i < networkList.size(); i++)
+    {
+        sprintf(    out + outCurrentLen,
+                    "<tr><td>%d.</td><td><input type=\"button\" class=\"buttonNetwork\" value=\"%s\" /></td><td>%s</td></tr>",
+                    i + 1, networkList[i].ssid, networkList[i].needsPsk ? "&#x1f512;" : "");
+        outCurrentLen = strlen(out);
+    }
+
+    sprintf(out + outCurrentLen, "</table>");
+    outCurrentLen = strlen(out);
+
+    /* Move everything after the tag to make space, then copy over the list.
+     * Remember to use strncpy() to exclude the null terminator so things after the table don't get missed out. */
+    tag = strstr(html, tagText);
+    tagStart = tag;
+    tag += strlen(tagText);
+    strcpy(tagStart + outCurrentLen, tag);
+    strncpy(tagStart, out, outCurrentLen);
 }
 
 void Http::onOops(httpd_req_t* request)
@@ -131,8 +179,10 @@ void Http::onOops(httpd_req_t* request)
 esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 {
     char* newHtml = nullptr;
+    constexpr char tagNetworkList[] = "[[NETWORKLIST]]";
     constexpr char tagStyles[] = "[[STYLES]]";
-    char tempBuf[64] = {};
+    constexpr int tempBufSize = 64;
+    char tempBuf[tempBufSize] = {};
 
     /* Import styles.css. */
     newHtml = doReplacement(page, tagStyles, htmlStyles);
@@ -161,6 +211,9 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
         itoa(config.NetworkIsSTA ? 1 : 0, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_WIFIMODE]]", tempBuf);
 
+        if(strstr(newHtml, tagNetworkList) != nullptr)
+            networkListAsTable(newHtml, tagNetworkList);
+
         httpd_resp_send(request, newHtml, HTTPD_RESP_USE_STRLEN);
     }
 
@@ -169,7 +222,13 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 
 esp_err_t onUriGet(httpd_req_t* request)
 {
-    return Http::GetInstance().SendPage(request, (char*)htmlHome);
+    char* pageToSend = (char*)htmlHome;
+
+    /* We will send the home page by default, but change it if we need to send something else. */
+    if(strstr(request->uri, "wifisearch") != nullptr)
+        pageToSend = (char*)htmlWifiSearch;
+
+    return Http::GetInstance().SendPage(request, pageToSend);
 }
 
 esp_err_t onWs(httpd_req_t* request)

@@ -64,8 +64,9 @@ esp_err_t Network::postInit()
 {
     esp_err_t err = ESP_OK;
 
-    /* Set up WiFi according to the desired mode and start it. */
-    err = esp_wifi_set_mode(config.NetworkIsSTA ? WIFI_MODE_STA : WIFI_MODE_AP);
+    /* Set up WiFi according to the desired mode and start it.
+     * We actually want AP+STA rather than just AP so we can scan for other networks at the same time. */
+    err = esp_wifi_set_mode(config.NetworkIsSTA ? WIFI_MODE_STA : WIFI_MODE_APSTA);
     if(err != ESP_OK)
         return err;
 
@@ -91,4 +92,39 @@ esp_err_t Network::postInit()
 esp_err_t Network::preInit()
 {
     return esp_netif_init();
+}
+
+esp_err_t Network::StartSTASearch(std::vector<WifiInfo>& list)
+{
+    esp_err_t err = esp_wifi_scan_start(nullptr, true);
+    uint16_t numSSIDs = 0;
+    wifi_ap_record_t* records = nullptr;
+
+    if(err != ESP_OK)
+    {
+        ESP_LOGE(__func__, "Could not start WiFi search (%d)!", err);
+        return err;
+    }
+    
+    esp_wifi_scan_get_ap_num(&numSSIDs);
+    ESP_LOGI(__func__, "Got %u SSIDs:", numSSIDs);
+    records = new wifi_ap_record_t[numSSIDs];
+    esp_wifi_scan_get_ap_records(&numSSIDs, records);
+
+    /* It turns out that wifi_ap_record_t is MASSIVE, so I'm not keeping that in RAM. :')
+     * Instead, we only care about two things: what is the SSID and does this SSID require a PSK?
+     * That's where WifiInfo comes in. */
+    list.clear();
+    for(int i = 0; i < numSSIDs; i++)
+    {
+        WifiInfo info;
+        info.needsPsk = (records[i].authmode != WIFI_AUTH_OPEN);
+        memcpy(info.ssid, records[i].ssid, MAX_SSID_LEN);
+        list.push_back(info);
+        ESP_LOGI(__func__, "\t%d: %s%s", i + 1, info.ssid, info.needsPsk ? " (psk)" : "");
+    }
+
+    if(records != nullptr)
+        delete[] records;
+    return err;
 }

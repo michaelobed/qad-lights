@@ -138,10 +138,15 @@
             }
 
             function onWifiSearch(button) {
+                const searchTime = 3000;
+
                 button.disabled = true;
                 button.value = "Searching...";
 
                 ws.send("wifiSearch");
+                setTimeout(() => {
+                    location.href = "/wifisearch";
+                }, searchTime);
             }
         </script>
     </body>

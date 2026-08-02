@@ -10,6 +10,7 @@
 #define Http_hpp
 
 #include "esp_http_server.h"
+#include "Network.hpp"
 
 class Http
 {
@@ -22,7 +23,7 @@ class Http
             return h;
         }
 
-        static constexpr int BufferSize = 8192;
+        static constexpr int BufferSize = 12288;
         char Buffer[BufferSize];
 
         bool HandleWs(char* data, size_t length);
@@ -31,6 +32,7 @@ class Http
 
     private:
         httpd_handle_t handle;
+        std::vector<Network::WifiInfo> networkList;
         static constexpr int wsUriBufSize = 64;
         char wsUriBuf[wsUriBufSize];
 
@@ -38,6 +40,17 @@ class Http
         httpd_uri_t uriHome =
         {
             .uri = "/",
+            .method = HTTP_GET,
+            .handler = nullptr,
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
+        };
+
+        httpd_uri_t uriWifiSearch =
+        {
+            .uri = "/wifisearch",
             .method = HTTP_GET,
             .handler = nullptr,
             .user_ctx = nullptr,
@@ -58,6 +71,7 @@ class Http
         };
 
         char* doReplacement(char* html, const char* toLookFor, const char* toReplaceItWith);
+        void networkListAsTable(char* html, const char* tagText);
         void onOops(httpd_req_t* request);
 };
 

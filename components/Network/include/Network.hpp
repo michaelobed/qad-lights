@@ -10,10 +10,17 @@
 #define Network_hpp
 
 #include "esp_wifi.h"
+#include <vector>
 
 class Network
 {
     public:
+        struct WifiInfo
+        {
+            bool needsPsk;
+            char ssid[MAX_SSID_LEN];
+        };
+
         Network();
 
         static Network& GetInstance()
@@ -23,6 +30,7 @@ class Network
         }
 
         esp_err_t InitAP();
+        esp_err_t StartSTASearch(std::vector<WifiInfo>& list);
 
     private:
         static constexpr int maxConnections = 3;
