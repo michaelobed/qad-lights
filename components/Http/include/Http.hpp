@@ -23,7 +23,7 @@ class Http
             return h;
         }
 
-        static constexpr int BufferSize = 10240;
+        static constexpr int BufferSize = 8192;
         char Buffer[BufferSize];
         bool NetworkScanInProgress;
 
@@ -72,7 +72,7 @@ class Http
         };
 
         char* doReplacement(char* html, const char* toLookFor, const char* toReplaceItWith);
-        void networkListAsTable(char* html, const char* tagText);
+        void networkListAsSelect(char* html, const char* tagText);
         void onOops(httpd_req_t* request);
 };
 

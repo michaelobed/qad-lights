@@ -140,40 +140,29 @@ esp_err_t Http::Init()
                 httpd_register_uri_handler(handle, &uriWs));
 }
 
-void Http::networkListAsTable(char* html, const char* tagText)
+void Http::networkListAsSelect(char* html, const char* tagText)
 {
     constexpr int outSize = 2048;
     char* out = new char[outSize];
     int outCurrentLen = 0;
-    int end = -1;
     char* tag = nullptr;
     char* tagStart = nullptr;
 
-    /* Add table header. */
-    sprintf(out, "<table><tr><th></th><th>Name</th><th>Needs password?</th></tr>");
-    outCurrentLen = strlen(out);
-
-    /* Prepare buttons and add an emoji when we need a PSK. */
+    /* Prepare the dropdown options and add an emoji when we need a PSK. */
     for(int i = 0; i < networkList.size(); i++)
     {
         sprintf(    out + outCurrentLen,
-                    "<tr><td>%d.</td><td><input type=\"button\" class=\"buttonNetwork\" value=\"%s\" /></td><td>%s</td></tr>",
-                    i + 1, networkList[i].ssid, networkList[i].needsPsk ? "&#x1f512;" : "");
+                    "<option value=\"%d\" data-needspsk=\"%s\">%s%s</option>",
+                    i, networkList[i].needsPsk ? "true" : "false", networkList[i].ssid, networkList[i].needsPsk ? " &#x1f512;" : "");
         outCurrentLen = strlen(out);
     }
 
-    sprintf(out + outCurrentLen, "</table>");
-    outCurrentLen = strlen(out);
-
-    /* Move everything after the tag to make space, then copy over the list.
-     * Remember to use strncpy() to exclude the null terminator so things after the table don't get missed out. */
+    /* Move everything after the tag to make space, then copy over the list. */
     tag = strstr(html, tagText);
     tagStart = tag;
     tag += strlen(tagText);
-    end = strstr(tagStart, "</html>") - tagStart;
-    strncpy(tagStart + outCurrentLen, tag, end);
-    tagStart[end] = '\0';
-    strncpy(tagStart, out, outCurrentLen);
+    strncpy(out + outCurrentLen, tagStart, outSize - outCurrentLen);
+    strncpy(tag, out, outSize);
     NetworkScanInProgress = false;
 }
 
@@ -218,7 +207,7 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
         newHtml = doReplacement(newHtml, "[[CONFIG_WIFIMODE]]", tempBuf);
 
         if(strstr(newHtml, tagNetworkList) != nullptr)
-            networkListAsTable(newHtml, tagNetworkList);
+            networkListAsSelect(newHtml, tagNetworkList);
 
         httpd_resp_send(request, newHtml, HTTPD_RESP_USE_STRLEN);
     }

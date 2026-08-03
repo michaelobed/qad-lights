@@ -45,18 +45,6 @@ td {
     padding: 20px;
 }
 
-.buttonNetwork {
-    background-color: lightgrey;
-    border: 2px solid black;
-    border-radius: 10px;
-    display: inline-block;
-    font-family: trebuchet ms;
-    font-size: 12px;
-    text-align: center;
-    transition-duration: 0.4s;
-    padding: 8px;
-}
-
 .rgbSlider, select {
     margin-left: 20px;
     width: 200px;
@@ -69,4 +57,9 @@ td {
 
 .textBox {
     margin-left: 15px;
+}
+
+.passwordBox {
+    margin-left: 20px;
+    width: 190px;
 }

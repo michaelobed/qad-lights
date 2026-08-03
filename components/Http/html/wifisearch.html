@@ -15,7 +15,22 @@
     <body>
         <h1>Choose a network:</h1>
         <p>
-            [[NETWORKLIST]]
+            <table>
+                <tr><th></th><th></th></tr>
+                <tr>
+                    <td><label for="ssid" id="ssidlabel">Network:</label></td>
+                    <td>
+                        <select id="ssid" onchange="onSsid(this);">
+                            <option value="choose">** Choose a network...**</option>
+                            [[NETWORKLIST]]
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td><label for="psk" id="psklabel">Password:</label></td>
+                    <td><input type="password" class="passwordBox" id="psk" /></td>
+                </tr>
+            </table>
         </p>
         <p>
             <input type="button" class="buttonNavigation" value="Back" onclick="goHome();" />
@@ -23,6 +38,11 @@
     <script>
         function goHome() {
             location.href = "/";
+        }
+
+        function onSsid(dropdown) {
+            var selected = dropdown.options[dropdown.selectedIndex];
+            document.getElementById("psk").disabled = (selected.dataset.needspsk == "false");
         }
     </script>
     </body>
