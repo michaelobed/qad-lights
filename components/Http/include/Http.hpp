@@ -23,8 +23,9 @@ class Http
             return h;
         }
 
-        static constexpr int BufferSize = 12288;
+        static constexpr int BufferSize = 10240;
         char Buffer[BufferSize];
+        bool NetworkScanInProgress;
 
         bool HandleWs(char* data, size_t length);
         esp_err_t Init();

@@ -24,8 +24,9 @@ static esp_err_t onWs(httpd_req_t* request);
 
 Http::Http()
 {
-    handle = nullptr;
     memset(Buffer, 0, BufferSize);
+    handle = nullptr;
+    NetworkScanInProgress = false;
 
     uriHome.handler = onUriGet;
     uriWifiSearch.handler = onUriGet;
@@ -49,7 +50,7 @@ char* Http::doReplacement(char* html, const char* toLookFor, const char* toRepla
             /* Copy everything until just before the tag, then replace it with the contents of toReplaceItWith. */
             tagLocation = tag - html;
             strncpy(Buffer, html, tagLocation);
-            strcpy(Buffer + tagLocation, toReplaceItWith);
+            strncpy(Buffer + tagLocation, toReplaceItWith, toReplaceItWithSize + 1);
             strcpy(Buffer + tagLocation + toReplaceItWithSize, html + tagLocation + toLookForSize);
             tag = Buffer;
         }
@@ -76,6 +77,7 @@ bool Http::HandleWs(char* data, size_t length)
     /* Then, handle starting a Wi-Fi scan. */
     else if(strstr(data, tagWifiSearch) != nullptr)
     {
+        NetworkScanInProgress = true;
         err = network.StartSTASearch(networkList);
         if(err != ESP_OK)
             ESP_LOGE(__func__, "Could not perform WiFi network search (%d)!", err);
@@ -143,6 +145,7 @@ void Http::networkListAsTable(char* html, const char* tagText)
     constexpr int outSize = 2048;
     char* out = new char[outSize];
     int outCurrentLen = 0;
+    int end = -1;
     char* tag = nullptr;
     char* tagStart = nullptr;
 
@@ -167,8 +170,11 @@ void Http::networkListAsTable(char* html, const char* tagText)
     tag = strstr(html, tagText);
     tagStart = tag;
     tag += strlen(tagText);
-    strcpy(tagStart + outCurrentLen, tag);
+    end = strstr(tagStart, "</html>") - tagStart;
+    strncpy(tagStart + outCurrentLen, tag, end);
+    tagStart[end] = '\0';
     strncpy(tagStart, out, outCurrentLen);
+    NetworkScanInProgress = false;
 }
 
 void Http::onOops(httpd_req_t* request)
@@ -222,13 +228,14 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 
 esp_err_t onUriGet(httpd_req_t* request)
 {
+    Http& http = Http::GetInstance();
     char* pageToSend = (char*)htmlHome;
 
     /* We will send the home page by default, but change it if we need to send something else. */
-    if(strstr(request->uri, "wifisearch") != nullptr)
+    if(http.NetworkScanInProgress && (strstr(request->uri, "wifisearch") != nullptr))
         pageToSend = (char*)htmlWifiSearch;
 
-    return Http::GetInstance().SendPage(request, pageToSend);
+    return http.SendPage(request, pageToSend);
 }
 
 esp_err_t onWs(httpd_req_t* request)
