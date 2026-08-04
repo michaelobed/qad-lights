@@ -12,17 +12,28 @@
         <!-- <link rel="stylesheet" href="styles.css"> -->
     </head>
 
-    <body onload="waitForRestart();">
-        <h1>Please wait...</h1>
-        <p>The device is restarting...</p>
+    <body onload="sendAck()">
+        <h1>Settings saved!</h1>
+        <p>
+            Your settings have been saved to flash and the device will now restart.<br>
+            Please make sure you're connected to the correct WiFi network, then click the button below to continue.
+        </p>
+        <p>
+            <input type="button" class="buttonNavigation" value="OK", onclick="location.href='http://[[CONFIG_NETWORKHOSTNAME]].local/';" />
+        </p>
     </body>
 
     <script>
-        const waitTime = 30000;
-        function waitForRestart() {
+        const ws = new WebSocket("/ws");
+
+        function sendAck() {
+            /* Wait a lil' bit before potentially firing off a string on a Websocket connection
+             * that hasn't even been established yet! */
+            const waitMs = 1000;
+
             setTimeout(() => {
-                location.href = "/";
-            }, waitTime);
+                ws.send("loadedrestart");
+            }, waitMs);
         }
     </script>
 </html>

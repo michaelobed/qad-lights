@@ -35,12 +35,14 @@ class Http
         std::vector<Network::WifiInfo> NetworkList;
         StateType State;
 
-        bool HandleWs(char* data, size_t length);
+        bool HandleWs(httpd_req_t* request, char* data, size_t length);
         esp_err_t Init();
         esp_err_t SendPage(httpd_req_t* request, char* page);
 
     private:
         httpd_handle_t handle;
+        static constexpr int restartWaitMs = 3000;
+        static constexpr int restartWaitMsNetwork = 30000;
         static constexpr int wsUriBufSize = 64;
         char wsUriBuf[wsUriBufSize];
 
@@ -48,6 +50,17 @@ class Http
         httpd_uri_t uriHome =
         {
             .uri = "/",
+            .method = HTTP_GET,
+            .handler = nullptr,
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
+        };
+
+        httpd_uri_t uriRestart =
+        {
+            .uri = "/restart",
             .method = HTTP_GET,
             .handler = nullptr,
             .user_ctx = nullptr,
@@ -92,6 +105,7 @@ class Http
         char* doReplacement(char* html, const char* toLookFor, const char* toReplaceItWith);
         void networkListAsSelect(char* html, const char* tagText);
         void onOops(httpd_req_t* request);
+        void triggerRestart(httpd_req_t* request);
 };
 
 #endif

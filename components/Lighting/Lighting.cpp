@@ -22,6 +22,41 @@ Lighting::Lighting()
     on = false;
 }
 
+void Lighting::DeInit()
+{
+    ledc_channel_config_t configChannel =
+    {
+        .gpio_num = -1,                         /* Don't care - we'll change this later. */
+        .speed_mode = LEDC_HIGH_SPEED_MODE,
+        .channel = LEDC_CHANNEL_MAX,            /* Ditto. */
+        .intr_type = LEDC_INTR_FADE_END,
+        .timer_sel = LEDC_TIMER_0,
+        .duty = 0,
+        .hpoint = 0,
+        .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+        .flags = 0,
+        .deconfigure = true                     /* This is the crucial bit! */
+    };
+    
+    /* Force lights off. */
+    doChange(0x00, 0x00, 0x00, 0, false);
+    on = false;
+
+    ledc_fade_func_uninstall();
+
+    configChannel.gpio_num = pinR;
+    configChannel.channel = LEDC_CHANNEL_0;
+    ledc_channel_config(&configChannel);
+    configChannel.gpio_num = pinG;
+    configChannel.channel = LEDC_CHANNEL_1;
+    ledc_channel_config(&configChannel);
+    configChannel.gpio_num = pinB;
+    configChannel.channel = LEDC_CHANNEL_2;
+    ledc_channel_config(&configChannel);
+
+    ESP_LOGW(__func__, "Lighting de-initialised.");
+}
+
 void Lighting::doChange(uint8_t r, uint8_t g, uint8_t b, int fadeTime, bool fade)
 {
     if(fade)

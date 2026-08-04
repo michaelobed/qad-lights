@@ -30,6 +30,7 @@ static void switchIOTask(void* arg);
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
+    bool isSTA = config.GetConfigData("networkIsSTA");
 
     /* Initialise a default event loop. */
     err = esp_event_loop_create_default();
@@ -75,13 +76,18 @@ extern "C" void app_main()
     }
 
     /* We have all the information we need. Start the WiFi! */
-    if(config.GetConfigData("networkIsSTA"))
+    if(isSTA)
     {
-        /* TODO: WiFi STA config. For now, panic. */
-        ESP_LOGE(__func__, "WiFi STA not yet supported!");
-        errorHandler();
+        err = network.InitSTA();
+        if(err != ESP_OK)
+        {
+            ESP_LOGW(__func__, "Could not start WiFi connection to network (%d)! Reverting to access point mode.", err);
+            isSTA = false;
+        }
+        else ESP_LOGI(__func__, "WiFi connected to network successfully.");
     }
-    else
+
+    if(!isSTA)
     {
         err = network.InitAP();
         if(err != ESP_OK)
@@ -114,6 +120,17 @@ void errorHandler()
 {
     /* Do nothing forever. */
     while(true);
+}
+
+void Restart()
+{
+    constexpr uint32_t delayUs = 3000000UL;
+
+    esp_rom_delay_us(delayUs);
+    vTaskDelete(switchIOTaskHandle);
+    lighting.DeInit();
+    network.DeInit();
+    esp_restart();
 }
 
 void switchIOTask(void* arg)

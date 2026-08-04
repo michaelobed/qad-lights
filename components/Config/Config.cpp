@@ -9,7 +9,6 @@
 #include "Config.hpp"
 #include <cstring>
 #include "esp_log.h"
-#include "../../main/main.hpp"
 
 Config::Config()
 {
@@ -20,7 +19,7 @@ Config::Config()
     networkIsSTA = false;
     strncpy(networkSsid, "YourNetworkHere", MAX_SSID_LEN);
     memset(networkPsk, 0, MAX_PASSPHRASE_LEN);
-    saveRequiresRestart = false;
+    shouldRestart = false;
 }
 
 int Config::configDataGetIndexOfTag(const char* tag)
@@ -165,7 +164,7 @@ esp_err_t Config::Load()
     return err;
 }
 
-void Config::Save()
+bool Config::Save()
 {
     nvs_set_u32(handle, "existence", existenceNum);
 
@@ -193,12 +192,18 @@ void Config::Save()
 
     nvs_commit(handle);
 
+    /* Return whether a restart is required for changes to take effect. */
+    return shouldRestart;
+}
+
 void Config::SetConfigData(const char* tag, uint32_t value)
 {
     int index = configDataGetIndexOfTag(tag);
 
     if(index != -1)
     {
+        if(dataMap[index].willTriggerRestart)
+            shouldRestart = true;
         switch(dataMap[index].size)
         {
             case 1:
@@ -224,5 +229,9 @@ void Config::SetConfigData(const char* tag, char* value)
     int index = configDataGetIndexOfTag(tag);
 
     if((index != -1) && !ConfigDataIsInt(tag))
+    {
+        if(dataMap[index].willTriggerRestart)
+            shouldRestart = true;
         strncpy(static_cast<char*>(dataMap[index].data), value, dataMap[index].size);
+    }
 }

@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "Http.hpp"
 #include "Lighting.hpp"
+#include "../../main/main.hpp"
 
 extern const char htmlHome[] asm("_binary_home_html_start");
 extern const char htmlRestart[] asm("_binary_restart_html_start");
@@ -31,14 +32,10 @@ Http::Http()
     State = State_Normal;
 
     uriHome.handler = onUriGet;
+    uriRestart.handler = onUriGet;
     uriWifiSearch.handler = onUriGet;
     uriWifiSubmit.handler = onUriPost;
     uriWs.handler = onWs;
-}
-
-void Http::DeInit()
-{
-    httpd_stop(handle);
 }
 
 char* Http::doReplacement(char* html, const char* toLookFor, const char* toReplaceItWith)
@@ -67,19 +64,25 @@ char* Http::doReplacement(char* html, const char* toLookFor, const char* toRepla
     return Buffer;
 }
 
-bool Http::HandleWs(char* data, size_t length)
+bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
 {
     char* dataStart = nullptr;
     esp_err_t err = ESP_OK;
+    bool shouldRestart = false;
     char tag[16] = {};
-    const char tagSave[] = "save";
-    const char tagWifiSearch[] = "wifiSearch";
+    constexpr char tagLoadedRestart[] = "loadedrestart";
+    constexpr char tagSave[] = "save";
+    constexpr char tagWifiSearch[] = "wifiSearch";
 
     /* Handle saving first since that isn't dependent on config tags. */
     if(strstr(data, tagSave) != nullptr)
     {
-        config.Save();
+        shouldRestart = config.Save();
         ESP_LOGI(__func__, "Config saved.");
+
+        /* Deal with the case where changes trigger restarts. */
+        if(shouldRestart)
+            triggerRestart(request);
         return true;
     }
 
@@ -91,6 +94,13 @@ bool Http::HandleWs(char* data, size_t length)
         if(err != ESP_OK)
             ESP_LOGE(__func__, "Could not perform WiFi network search (%d)!", err);
         return true;
+    }
+
+    else if(strstr(data, tagLoadedRestart) != nullptr)
+    {
+        ESP_LOGW(__func__, "Restart triggered via Websocket, will restart now!");
+        Restart();
+        while(true);
     }
 
     /* Otherwise, we are looking for exactly one tag which should be identical to that of the Config data.
@@ -128,6 +138,7 @@ esp_err_t Http::Init()
     /* Start httpd and register URIs. */
     return (    httpd_start(&handle, &httpConfig) |
                 httpd_register_uri_handler(handle, &uriHome) |
+                httpd_register_uri_handler(handle, &uriRestart) |
                 httpd_register_uri_handler(handle, &uriWifiSearch) |
                 httpd_register_uri_handler(handle, &uriWifiSubmit) |
                 httpd_register_uri_handler(handle, &uriWs));
@@ -170,6 +181,7 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
     uint32_t lightingColour = config.GetConfigData("lightingColour");
     char* newHtml = nullptr;
     constexpr char tagNetworkList[] = "[[NETWORKLIST]]";
+    constexpr char tagRestartWait[] = "[[RESTARTWAIT]]";
     constexpr char tagStyles[] = "[[STYLES]]";
     constexpr int tempBufSize = 64;
     char tempBuf[tempBufSize] = {};
@@ -180,10 +192,7 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
     if(newHtml == nullptr)
         onOops(request);
     else
-    {
-        config.GetConfigData("networkHostname", &hostname);
-        newHtml = doReplacement(newHtml, "[[CONFIG_HOSTNAME]]", hostname);
-        
+    {        
         itoa((lightingColour >> 16) & 0xff, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_R]]", tempBuf);
 
@@ -195,6 +204,9 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 
         itoa(config.GetConfigData("lightingMode"), tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGMODE]]", tempBuf);
+
+        config.GetConfigData("networkHostname", &hostname);
+        newHtml = doReplacement(newHtml, "[[CONFIG_NETWORKHOSTNAME]]", hostname);
         
         itoa(config.GetConfigData("switchPolarity"), tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_SWITCHPOLARITY]]", tempBuf);
@@ -205,10 +217,30 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
         if(strstr(newHtml, tagNetworkList) != nullptr)
             networkListAsSelect(newHtml, tagNetworkList);
 
+        /* For tagRestartWait, the value depends on if we're updating network settings. */
+        itoa(strstr(request->uri, "wifisearch") != nullptr ? restartWaitMsNetwork : restartWaitMs, tempBuf, 10);
+        newHtml = doReplacement(newHtml, tagRestartWait, tempBuf);
+
         httpd_resp_send(request, newHtml, HTTPD_RESP_USE_STRLEN);
     }
 
     return ESP_OK;
+}
+
+void Http::triggerRestart(httpd_req_t* request)
+{
+    constexpr char restartString[] = "restart";
+    httpd_ws_frame_t packet =
+    {
+        .final = false,                     /* Don't care (see esp_http_server.h). */
+        .fragmented = false,
+        .type = HTTPD_WS_TYPE_TEXT,
+        .payload = (uint8_t*)restartString,
+        .len = strlen(restartString)
+    };
+
+    /* Warn the client that a restart is happening. This will trigger a href change to "/restart". */
+    httpd_ws_send_frame(request, &packet);
 }
 
 esp_err_t onUriGet(httpd_req_t* request)
@@ -219,6 +251,8 @@ esp_err_t onUriGet(httpd_req_t* request)
     /* We will send the home page by default, but change it if we need to send something else. */
     if((http.State == Http::State_WifiSearch) && (strstr(request->uri, "wifisearch") != nullptr))
         pageToSend = (char*)htmlWifiSearch;
+    else if(strstr(request->uri, "restart") != nullptr)
+        pageToSend = (char*)htmlRestart;
 
     return http.SendPage(request, pageToSend);
 }
@@ -230,7 +264,7 @@ esp_err_t onUriPost(httpd_req_t* request)
     int index = -1;
     char indexString[4];
     char* nextToken = nullptr;
-    char* pageToSend = (char*)htmlHome;
+    char* pageToSend = (char*)htmlRestart;
     char* tag = nullptr;
     int tagLen = -1;
     
@@ -275,7 +309,9 @@ esp_err_t onUriPost(httpd_req_t* request)
         }
     }
 
-    return http.SendPage(request, pageToSend);
+    http.SendPage(request, pageToSend);
+    config.Save();
+    return ESP_OK;
 }
 
 esp_err_t onWs(httpd_req_t* request)
@@ -311,7 +347,7 @@ esp_err_t onWs(httpd_req_t* request)
     else
     {
         /* Handle the data. */
-        if(!Http::GetInstance().HandleWs((char*)rxBuf, wsFrame.len))
+        if(!Http::GetInstance().HandleWs(request, (char*)rxBuf, wsFrame.len))
         {
             ESP_LOGE(__func__, "Invalid payload!");
             err = ESP_ERR_INVALID_RESPONSE;

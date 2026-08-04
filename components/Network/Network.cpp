@@ -20,6 +20,13 @@ Network::Network()
     netIfInstance = nullptr;
 }
 
+void Network::DeInit()
+{
+    mdns_free();
+    esp_wifi_stop();
+    ESP_LOGW(__func__, "Network de-initialised.");
+}
+
 esp_err_t Network::InitAP()
 {
     char defaultSsid[16] = {};
@@ -58,6 +65,39 @@ esp_err_t Network::InitAP()
         err = postInit();
 
     return err;
+}
+
+esp_err_t Network::InitSTA()
+{
+    char* configString = nullptr;
+    esp_err_t err = ESP_OK;
+    wifi_init_config_t initConfig = WIFI_INIT_CONFIG_DEFAULT();
+
+    err = preInit();
+    if(err != ESP_OK)
+    {
+        ESP_LOGE(__func__, "WiFi net-if initialisation failed (%d)!", err);
+        return err;
+    }
+
+    netIfInstance = esp_netif_create_default_wifi_sta();
+    if(netIfInstance == nullptr)
+    {
+        err = ESP_FAIL;
+        ESP_LOGE(__func__, "WiFi STA creation failed!");
+        return err;
+    }
+
+    config.GetConfigData("networkSsid", &configString);
+    memcpy(wifiConfig.sta.ssid, configString, MAX_SSID_LEN);
+    config.GetConfigData("networkPsk", &configString);
+    memcpy(wifiConfig.sta.password, configString, MAX_PASSPHRASE_LEN);
+    wifiConfig.sta.channel = CONFIG_NETWORK_CHANNEL;
+    err = esp_wifi_init(&initConfig);
+    if(err == ESP_OK)
+        err = postInit();
+    
+    return ESP_OK;
 }
 
 esp_err_t Network::postInit()

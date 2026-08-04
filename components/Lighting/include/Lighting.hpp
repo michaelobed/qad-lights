@@ -9,7 +9,6 @@
 #ifndef Lighting_hpp
 #define Lighting_hpp
 
-#include <cstdint>
 #include "driver/ledc.h"
 
 class Lighting
@@ -23,6 +22,7 @@ class Lighting
             return l;
         }
 
+        void DeInit();
         esp_err_t Init();
         void SetColour(uint32_t colour, bool fade = true);      /* Stored as 0xXXRRGGBB. */
         void SetState(bool isOn);

@@ -22,7 +22,7 @@ class Config
             char tag[tagMaxLen];
             void* data;
             size_t size;
-            bool saveRequiresRestart;
+            bool willTriggerRestart;
         };
 
         enum LEDMode : uint8_t
@@ -54,7 +54,7 @@ class Config
         void GetConfigData(const char* tag, char** out);
         esp_err_t InitStorage();
         esp_err_t Load();
-        void Save();
+        bool Save();
         void SetConfigData(const char* tag, uint32_t value);
         void SetConfigData(const char* tag, char* value);
 
@@ -68,7 +68,7 @@ class Config
         bool networkIsSTA;
         char networkPsk[MAX_PASSPHRASE_LEN];
         char networkSsid[MAX_SSID_LEN];
-        bool saveRequiresRestart;
+        bool shouldRestart;
         int switchPolarity;
 
         const std::vector<ConfigData> dataMap =

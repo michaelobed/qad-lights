@@ -56,7 +56,7 @@
         <h2>Network</h2>
         <p>
             <label for="hostname">Hostname</label>
-            <input type="text" class="textBox" value="[[CONFIG_HOSTNAME]]" oninput="onHostname();" />
+            <input type="text" class="textBox" id="hostname" value="[[CONFIG_NETWORKHOSTNAME]]" onchange="onHostname();" />
         </p>
         <p>
             <label for="wifimode">WiFi mode</label>
@@ -72,10 +72,16 @@
         <p><input type="button" class="buttonNavigation" id="save" value="Save settings to flash" onclick="onSaveSettings();"></p>
 
         <script>
-            const ws = new WebSocket("ws://qad-lights.local/ws");
+            const ws = new WebSocket("ws://[[CONFIG_NETWORKHOSTNAME]].local/ws");
 
             ws.addEventListener("error", (event) => {
                 console.error("Websocket gave error:", event);
+            });
+
+            ws.addEventListener("message", (event) => {
+                if(event.data == "restart") {
+                    location.href = "/restart";
+                }
             });
 
             function onLedMode(fromUI) {
@@ -93,7 +99,7 @@
 
             function onHostname() {
                 var hostnameVal = document.getElementById("hostname").value;
-                ws.send(`hostname: ${hostnameVal}`);
+                ws.send(`networkHostname: ${hostnameVal}`);
             }
 
             function onLoad() {
@@ -147,6 +153,10 @@
                 setTimeout(() => {
                     location.href = "/wifisearch";
                 }, searchTime);
+            }
+
+            function onWsMessage(message) {
+
             }
         </script>
     </body>
