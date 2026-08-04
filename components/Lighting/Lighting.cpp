@@ -104,7 +104,7 @@ esp_err_t Lighting::Init()
         return err;
     }
 
-    SetColour(config.LightingColour);
+    SetColour(config.GetConfigData("lightingColour"));
     
     return err;
 }

@@ -12,6 +12,7 @@
 #include "Lighting.hpp"
 
 extern const char htmlHome[] asm("_binary_home_html_start");
+extern const char htmlRestart[] asm("_binary_restart_html_start");
 extern const char htmlStyles[] asm("_binary_styles_css_start");
 extern const char htmlWifiSearch[] asm("_binary_wifisearch_html_start");
 
@@ -20,17 +21,24 @@ static Lighting& lighting = Lighting::GetInstance();
 static Network& network = Network::GetInstance();
 
 static esp_err_t onUriGet(httpd_req_t* request);
+static esp_err_t onUriPost(httpd_req_t* request);
 static esp_err_t onWs(httpd_req_t* request);
 
 Http::Http()
 {
     memset(Buffer, 0, BufferSize);
     handle = nullptr;
-    NetworkScanInProgress = false;
+    State = State_Normal;
 
     uriHome.handler = onUriGet;
     uriWifiSearch.handler = onUriGet;
+    uriWifiSubmit.handler = onUriPost;
     uriWs.handler = onWs;
+}
+
+void Http::DeInit()
+{
+    httpd_stop(handle);
 }
 
 char* Http::doReplacement(char* html, const char* toLookFor, const char* toReplaceItWith)
@@ -63,6 +71,7 @@ bool Http::HandleWs(char* data, size_t length)
 {
     char* dataStart = nullptr;
     esp_err_t err = ESP_OK;
+    char tag[16] = {};
     const char tagSave[] = "save";
     const char tagWifiSearch[] = "wifiSearch";
 
@@ -77,8 +86,8 @@ bool Http::HandleWs(char* data, size_t length)
     /* Then, handle starting a Wi-Fi scan. */
     else if(strstr(data, tagWifiSearch) != nullptr)
     {
-        NetworkScanInProgress = true;
-        err = network.StartSTASearch(networkList);
+        State = State_WifiSearch;
+        err = network.StartSTASearch(NetworkList);
         if(err != ESP_OK)
             ESP_LOGE(__func__, "Could not perform WiFi network search (%d)!", err);
         return true;
@@ -86,41 +95,24 @@ bool Http::HandleWs(char* data, size_t length)
 
     /* Otherwise, we are looking for exactly one tag which should be identical to that of the Config data.
      * If it isn't, it's invalid. */
-    for(int i = 0; i < Config::DataMapMaxLen; i++)
+    strncpy(tag, data, strchr(data, ':') - data);
+    
+    if(config.ConfigDataIsValidTag(tag))
     {
-        if(strstr(data, config.DataMap[i].tag) != nullptr)
+        /* Look for a ": ". Anything after that is the data we seek. */
+        dataStart = strstr(data, ": ");
+        if(dataStart != nullptr)
         {
-            /* Look for a ": ". Anything after that is the data we seek. */
-            dataStart = strstr(data, ": ");
-            if(dataStart != nullptr)
-            {
-                dataStart += 2;
-                switch(config.DataMap[i].size)
-                {
-                    case 1:
-                        *(uint8_t*)config.DataMap[i].data = atoi(dataStart);
-                        break;
+            dataStart += 2;
+            if(config.ConfigDataIsInt(tag))
+                config.SetConfigData(tag, atoi(dataStart));
+            else config.SetConfigData(tag, dataStart);
 
-                    case 2:
-                        *(uint16_t*)config.DataMap[i].data = atoi(dataStart);
-                        break;
-
-                    case 4:
-                        *(uint32_t*)config.DataMap[i].data = atoi(dataStart);
-                        break;
-
-                    /* This'll be a string. */
-                    default:
-                        strncpy(static_cast<char*>(config.DataMap[i].data), dataStart, config.DataMap[i].size);
-                        break;
-                }
-
-                /* If it was a lighting change, handle that. */
-                if(strstr(data, "lightingColour") != nullptr)
-                    lighting.SetColour(atoi(dataStart), false);
-            }
-            return true;
+            /* If it was a lighting change, handle that. */
+            if(strstr(data, "lightingColour") != nullptr)
+                lighting.SetColour(atoi(dataStart), false);
         }
+        return true;
     }
 
     return false;
@@ -137,6 +129,7 @@ esp_err_t Http::Init()
     return (    httpd_start(&handle, &httpConfig) |
                 httpd_register_uri_handler(handle, &uriHome) |
                 httpd_register_uri_handler(handle, &uriWifiSearch) |
+                httpd_register_uri_handler(handle, &uriWifiSubmit) |
                 httpd_register_uri_handler(handle, &uriWs));
 }
 
@@ -149,11 +142,11 @@ void Http::networkListAsSelect(char* html, const char* tagText)
     char* tagStart = nullptr;
 
     /* Prepare the dropdown options and add an emoji when we need a PSK. */
-    for(int i = 0; i < networkList.size(); i++)
+    for(int i = 0; i < NetworkList.size(); i++)
     {
         sprintf(    out + outCurrentLen,
                     "<option value=\"%d\" data-needspsk=\"%s\">%s%s</option>",
-                    i, networkList[i].needsPsk ? "true" : "false", networkList[i].ssid, networkList[i].needsPsk ? " &#x1f512;" : "");
+                    i, NetworkList[i].needsPsk ? "true" : "false", NetworkList[i].ssid, NetworkList[i].needsPsk ? " &#x1f512;" : "");
         outCurrentLen = strlen(out);
     }
 
@@ -163,7 +156,7 @@ void Http::networkListAsSelect(char* html, const char* tagText)
     tag += strlen(tagText);
     strncpy(out + outCurrentLen, tagStart, outSize - outCurrentLen);
     strncpy(tag, out, outSize);
-    NetworkScanInProgress = false;
+    State = State_WifiChoice;
 }
 
 void Http::onOops(httpd_req_t* request)
@@ -173,6 +166,8 @@ void Http::onOops(httpd_req_t* request)
 
 esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 {
+    char* hostname = nullptr;
+    uint32_t lightingColour = config.GetConfigData("lightingColour");
     char* newHtml = nullptr;
     constexpr char tagNetworkList[] = "[[NETWORKLIST]]";
     constexpr char tagStyles[] = "[[STYLES]]";
@@ -186,24 +181,25 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
         onOops(request);
     else
     {
-        newHtml = doReplacement(newHtml, "[[CONFIG_HOSTNAME]]", config.Hostname);
+        config.GetConfigData("networkHostname", &hostname);
+        newHtml = doReplacement(newHtml, "[[CONFIG_HOSTNAME]]", hostname);
         
-        itoa((config.LightingColour >> 16) & 0xff, tempBuf, 10);
+        itoa((lightingColour >> 16) & 0xff, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_R]]", tempBuf);
 
-        itoa((config.LightingColour >> 8) & 0xff, tempBuf, 10);
+        itoa((lightingColour >> 8) & 0xff, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_G]]", tempBuf);
 
-        itoa(config.LightingColour & 0xff, tempBuf, 10);
+        itoa(lightingColour & 0xff, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGCOLOUR_B]]", tempBuf);
 
-        itoa(config.LightingMode, tempBuf, 10);
+        itoa(config.GetConfigData("lightingMode"), tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_LIGHTINGMODE]]", tempBuf);
         
-        itoa(config.SwitchPolarity, tempBuf, 10);
+        itoa(config.GetConfigData("switchPolarity"), tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_SWITCHPOLARITY]]", tempBuf);
 
-        itoa(config.NetworkIsSTA ? 1 : 0, tempBuf, 10);
+        itoa(config.GetConfigData("networkIsSTA") ? 1 : 0, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_WIFIMODE]]", tempBuf);
 
         if(strstr(newHtml, tagNetworkList) != nullptr)
@@ -221,8 +217,63 @@ esp_err_t onUriGet(httpd_req_t* request)
     char* pageToSend = (char*)htmlHome;
 
     /* We will send the home page by default, but change it if we need to send something else. */
-    if(http.NetworkScanInProgress && (strstr(request->uri, "wifisearch") != nullptr))
+    if((http.State == Http::State_WifiSearch) && (strstr(request->uri, "wifisearch") != nullptr))
         pageToSend = (char*)htmlWifiSearch;
+
+    return http.SendPage(request, pageToSend);
+}
+
+esp_err_t onUriPost(httpd_req_t* request)
+{
+    int err = 0;
+    Http& http = Http::GetInstance();
+    int index = -1;
+    char indexString[4];
+    char* nextToken = nullptr;
+    char* pageToSend = (char*)htmlHome;
+    char* tag = nullptr;
+    int tagLen = -1;
+    
+    if((http.State == Http::State_WifiChoice) && strstr(request->uri, "wifisubmit") != nullptr)
+    {
+        /* Again, send back the home page by default unless we really are processing something. */
+        pageToSend = (char*)htmlRestart;
+
+        /* Get the POST data.
+         * For the record, I really hate that we're sending passwords in plaintext via POST, but whatever. It's quick-and-dirty for a reason... */
+        memset(http.Buffer, 0, http.BufferSize);
+        err = httpd_req_recv(request, http.Buffer, request->content_len);
+        ESP_LOGI(__func__, "Successfully received %d bytes", request->content_len);
+
+        /* If the socket was closed, abort everything. */
+        if(err == 0)
+            return ESP_FAIL;
+
+        /* Handle timeout.*/
+        else if(err == HTTPD_SOCK_ERR_TIMEOUT)
+            httpd_resp_send_408(request);
+
+        /* Handle SSID. */
+        tag = strstr(http.Buffer, "ssid=");
+
+        /* Find PSK. It may be that we never got one, so handle that case too. */
+        nextToken = strchr(tag, '&');
+        if(nextToken == nullptr)
+            tagLen = strlen(tag);
+        else tagLen = nextToken - tag;
+
+        /* Find the index of the selected network, then apply SSID. */
+        strncpy(indexString, tag + 5, tagLen);
+        index = atoi(indexString);
+        config.SetConfigData("networkSsid", http.NetworkList[index].ssid);
+
+        /* Apply PSK if there is one. */
+        if(http.NetworkList[index].needsPsk)
+        {
+            tag = strstr(http.Buffer, "psk=");
+            config.SetConfigData("networkPsk", tag + 4);
+        }
+    }
 
     return http.SendPage(request, pageToSend);
 }

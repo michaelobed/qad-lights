@@ -15,6 +15,13 @@
 class Http
 {
     public:
+        enum StateType
+        {
+            State_Normal,
+            State_WifiSearch,
+            State_WifiChoice
+        };
+
         Http();
 
         static Http& GetInstance()
@@ -25,7 +32,8 @@ class Http
 
         static constexpr int BufferSize = 8192;
         char Buffer[BufferSize];
-        bool NetworkScanInProgress;
+        std::vector<Network::WifiInfo> NetworkList;
+        StateType State;
 
         bool HandleWs(char* data, size_t length);
         esp_err_t Init();
@@ -33,7 +41,6 @@ class Http
 
     private:
         httpd_handle_t handle;
-        std::vector<Network::WifiInfo> networkList;
         static constexpr int wsUriBufSize = 64;
         char wsUriBuf[wsUriBufSize];
 
@@ -53,6 +60,17 @@ class Http
         {
             .uri = "/wifisearch",
             .method = HTTP_GET,
+            .handler = nullptr,
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
+        };
+
+        httpd_uri_t uriWifiSubmit =
+        {
+            .uri = "/wifisubmit",
+            .method = HTTP_POST,
             .handler = nullptr,
             .user_ctx = nullptr,
             .is_websocket = false,

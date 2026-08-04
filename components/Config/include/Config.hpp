@@ -11,6 +11,7 @@
 
 #include "esp_wifi_types.h"
 #include "nvs_flash.h"
+#include <vector>
 
 class Config
 {
@@ -21,6 +22,7 @@ class Config
             char tag[tagMaxLen];
             void* data;
             size_t size;
+            bool saveRequiresRestart;
         };
 
         enum LEDMode : uint8_t
@@ -44,36 +46,43 @@ class Config
             static Config c;
             return c;
         }
-        
-        static constexpr int DataMapMaxLen = 7;
-        static constexpr size_t HostnameMaxLen = 128;
-        char Hostname[HostnameMaxLen];
-        uint32_t LightingColour;
-        int LightingMode;
-        bool NetworkIsSTA;
-        char NetworkPsk[MAX_PASSPHRASE_LEN];
-        char NetworkSsid[MAX_SSID_LEN];
-        int SwitchPolarity;
 
-        ConfigData DataMap[DataMapMaxLen] =
-        {
-            {   "lightingColour", &LightingColour, 4 },
-            {   "lightingMode",   &LightingMode,   1 },
-            {   "hostname",       Hostname,        HostnameMaxLen },
-            {   "networkIsSTA",   &NetworkIsSTA,   1 },
-            {   "networkPsk",     &NetworkPsk,     MAX_PASSPHRASE_LEN },
-            {   "networkSsid",    &NetworkSsid,    MAX_SSID_LEN },
-            {   "switchPolarity", &SwitchPolarity, 1}
-        };
-
+        bool ConfigDataIsInt(const char* tag);
+        bool ConfigDataIsValidTag(const char* tag);
         void EraseAll();
+        uint32_t GetConfigData(const char* tag);
+        void GetConfigData(const char* tag, char** out);
         esp_err_t InitStorage();
         esp_err_t Load();
         void Save();
+        void SetConfigData(const char* tag, uint32_t value);
+        void SetConfigData(const char* tag, char* value);
 
     private:
         static constexpr uint32_t existenceNum = 0x99ef0b05;
         nvs_handle_t handle;
+        static constexpr size_t hostnameMaxLen = 128;
+        char hostname[hostnameMaxLen];
+        uint32_t lightingColour;
+        int lightingMode;
+        bool networkIsSTA;
+        char networkPsk[MAX_PASSPHRASE_LEN];
+        char networkSsid[MAX_SSID_LEN];
+        bool saveRequiresRestart;
+        int switchPolarity;
+
+        const std::vector<ConfigData> dataMap =
+        {
+            {   "lightingColour",   &lightingColour,    4,                  false },
+            {   "lightingMode",     &lightingMode,      1,                  false },
+            {   "networkHostname",  hostname,           hostnameMaxLen,     true },
+            {   "networkIsSTA",     &networkIsSTA,      1,                  true },
+            {   "networkPsk",       &networkPsk,        MAX_PASSPHRASE_LEN, true },
+            {   "networkSsid",      &networkSsid,       MAX_SSID_LEN,       true },
+            {   "switchPolarity",   &switchPolarity,    1,                  false }
+        };
+
+        int configDataGetIndexOfTag(const char* tag);
 };
 
 #endif

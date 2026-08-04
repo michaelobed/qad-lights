@@ -75,7 +75,7 @@ extern "C" void app_main()
     }
 
     /* We have all the information we need. Start the WiFi! */
-    if(config.NetworkIsSTA)
+    if(config.GetConfigData("networkIsSTA"))
     {
         /* TODO: WiFi STA config. For now, panic. */
         ESP_LOGE(__func__, "WiFi STA not yet supported!");

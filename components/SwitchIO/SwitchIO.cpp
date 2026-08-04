@@ -51,12 +51,13 @@ bool SwitchIO::Update()
 {
     bool allOn = true;
     bool anyOn = false;
-    bool isNc = (config.SwitchPolarity == Config::SwPol_NormallyClosed);
+    bool isNc = (config.GetConfigData("switchPolarity") == Config::SwPol_NormallyClosed);
+    int_least32_t lightingMode = config.GetConfigData("lightingMode");
     bool state = false;
 
-    if(config.LightingMode == Config::LEDMode_Off)
+    if(lightingMode == Config::LEDMode_Off)
         return false;
-    else if(config.LightingMode == Config::LEDMode_On)
+    else if(lightingMode == Config::LEDMode_On)
         return true;
 
     /* We're here because the config depends on switch states, so read them and perform logic. */
@@ -70,7 +71,7 @@ bool SwitchIO::Update()
     }
 
     /* Return what the effective state of the lights should be. */
-    if(config.LightingMode == Config::LEDMode_OnAny)
+    if(lightingMode == Config::LEDMode_OnAny)
         return anyOn;
     else return allOn;
 }

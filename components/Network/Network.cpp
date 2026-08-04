@@ -62,15 +62,17 @@ esp_err_t Network::InitAP()
 
 esp_err_t Network::postInit()
 {
+    char* hostname = nullptr;
+    bool isSTA = config.GetConfigData("networkIsSTA");
     esp_err_t err = ESP_OK;
 
     /* Set up WiFi according to the desired mode and start it.
      * We actually want AP+STA rather than just AP so we can scan for other networks at the same time. */
-    err = esp_wifi_set_mode(config.NetworkIsSTA ? WIFI_MODE_STA : WIFI_MODE_APSTA);
+    err = esp_wifi_set_mode(isSTA ? WIFI_MODE_STA : WIFI_MODE_APSTA);
     if(err != ESP_OK)
         return err;
 
-    err = esp_wifi_set_config(config.NetworkIsSTA ? WIFI_IF_STA : WIFI_IF_AP, &wifiConfig);
+    err = esp_wifi_set_config(isSTA ? WIFI_IF_STA : WIFI_IF_AP, &wifiConfig);
     if(err != ESP_OK)
         return err;
 
@@ -83,7 +85,8 @@ esp_err_t Network::postInit()
     if(err != ESP_OK)
         return err;
     
-    mdns_hostname_set(config.Hostname);
+    config.GetConfigData("networkHostname", &hostname);
+    mdns_hostname_set(hostname);
     mdns_service_add(nullptr, "_http", "_tcp", 80, nullptr, 0);
     mdns_service_instance_name_set("_http", "_tcp", "Quick-And-Dirty Lights");
     return ESP_OK;

@@ -15,12 +15,13 @@
     <body>
         <h1>Choose a network:</h1>
         <p>
+            <form id="networkform" name="networkform" action="/wifisubmit" method="post" />
             <table>
                 <tr><th></th><th></th></tr>
                 <tr>
                     <td><label for="ssid" id="ssidlabel">Network:</label></td>
                     <td>
-                        <select id="ssid" onchange="onSsid(this);">
+                        <select id="ssid" name="ssid" onchange="onSsid(this);" form="networkform">
                             <option value="choose">** Choose a network...**</option>
                             [[NETWORKLIST]]
                         </select>
@@ -28,12 +29,13 @@
                 </tr>
                 <tr>
                     <td><label for="psk" id="psklabel">Password:</label></td>
-                    <td><input type="password" class="passwordBox" id="psk" /></td>
+                    <td><input type="password" class="passwordBox" id="psk" name="psk" form="networkform" /></td>
                 </tr>
             </table>
         </p>
         <p>
             <input type="button" class="buttonNavigation" value="Back" onclick="goHome();" />
+            <input type="submit" class="buttonNavigation" id="buttonGo" value="Go!" form="networkform" />
         </p>
     <script>
         function goHome() {
@@ -43,6 +45,7 @@
         function onSsid(dropdown) {
             var selected = dropdown.options[dropdown.selectedIndex];
             document.getElementById("psk").disabled = (selected.dataset.needspsk == "false");
+            document.getElementById("buttonGo").disabled = (selected.value == "choose");
         }
     </script>
     </body>

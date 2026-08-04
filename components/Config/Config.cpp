@@ -9,22 +9,92 @@
 #include "Config.hpp"
 #include <cstring>
 #include "esp_log.h"
+#include "../../main/main.hpp"
 
 Config::Config()
 {
     /* Default values go here. */
-    LightingColour = 0xffffff;
-    LightingMode = LEDMode_On;
-    strncpy(Hostname, "qad-lights", HostnameMaxLen);
-    NetworkIsSTA = false;
-    strncpy(NetworkSsid, "YourNetworkHere", MAX_SSID_LEN);
-    memset(NetworkPsk, 0, MAX_PASSPHRASE_LEN);
+    lightingColour = 0xffffff;
+    lightingMode = LEDMode_On;
+    strncpy(hostname, "qad-lights", hostnameMaxLen);
+    networkIsSTA = false;
+    strncpy(networkSsid, "YourNetworkHere", MAX_SSID_LEN);
+    memset(networkPsk, 0, MAX_PASSPHRASE_LEN);
+    saveRequiresRestart = false;
+}
+
+int Config::configDataGetIndexOfTag(const char* tag)
+{
+    for(int i = 0; i < dataMap.size(); i++)
+    {
+        if(strcmp(dataMap[i].tag, tag) == 0)
+            return i;
+    }
+
+    return -1;
+}
+
+bool Config::ConfigDataIsInt(const char* tag)
+{
+    int index = configDataGetIndexOfTag(tag);
+
+    if(index != -1)
+    {
+        switch(dataMap[index].size)
+        {
+            case 1:
+            case 2:
+            case 4:
+                return true;
+    
+            default:
+                return false;
+        }
+    }
+    else return false;
+}
+
+bool Config::ConfigDataIsValidTag(const char* tag)
+{
+    return (configDataGetIndexOfTag(tag) != -1);
 }
 
 void Config::EraseAll()
 {
     nvs_erase_all(handle);
     nvs_commit(handle);
+}
+
+uint32_t Config::GetConfigData(const char* tag)
+{
+    int index = configDataGetIndexOfTag(tag);
+
+    if(index != -1)
+    {
+        switch(dataMap[index].size)
+        {
+            case 1:
+                return *static_cast<uint8_t*>(dataMap[index].data);
+
+            case 2:
+                return *static_cast<uint16_t*>(dataMap[index].data);
+
+            case 4:
+                return *static_cast<uint32_t*>(dataMap[index].data);
+
+            default:
+                return 0;
+        }
+    }
+    else return 0;
+}
+
+void Config::GetConfigData(const char* tag, char** out)
+{
+    int index = configDataGetIndexOfTag(tag);
+
+    if((index != -1) && !ConfigDataIsInt(tag))
+        *out = static_cast<char*>(dataMap[index].data);
 }
 
 esp_err_t Config::InitStorage()
@@ -63,31 +133,31 @@ esp_err_t Config::Load()
         return ESP_FAIL;
 
     /* If we do, grab all the config data. */
-    for(int i = 0; i < DataMapMaxLen; i++)
+    for(int i = 0; i < dataMap.size(); i++)
     {
-        switch(DataMap[i].size)
+        switch(dataMap[i].size)
         {
             case 1:
-                err = nvs_get_u8(handle, DataMap[i].tag, static_cast<uint8_t*>(DataMap[i].data));
+                err = nvs_get_u8(handle, dataMap[i].tag, static_cast<uint8_t*>(dataMap[i].data));
                 break;
 
             case 2:
-                err = nvs_get_u16(handle, DataMap[i].tag, static_cast<uint16_t*>(DataMap[i].data));
+                err = nvs_get_u16(handle, dataMap[i].tag, static_cast<uint16_t*>(dataMap[i].data));
                 break;
 
             case 4:
-                err = nvs_get_u32(handle, DataMap[i].tag, static_cast<uint32_t*>(DataMap[i].data));
+                err = nvs_get_u32(handle, dataMap[i].tag, static_cast<uint32_t*>(dataMap[i].data));
                 break;
 
             default:
-                size = DataMap[i].size;
-                err = nvs_get_str(handle, DataMap[i].tag, static_cast<char*>(DataMap[i].data), &size);
+                size = dataMap[i].size;
+                err = nvs_get_str(handle, dataMap[i].tag, static_cast<char*>(dataMap[i].data), &size);
                 break;
         }
 
         if(err != ESP_OK)
         {
-            ESP_LOGE(__func__, "Could not load config data \"%s\" (%d)!", DataMap[i].tag, err);
+            ESP_LOGE(__func__, "Could not load config data \"%s\" (%d)!", dataMap[i].tag, err);
             break;
         }
     }
@@ -99,27 +169,60 @@ void Config::Save()
 {
     nvs_set_u32(handle, "existence", existenceNum);
 
-    for(int i = 0; i < DataMapMaxLen; i++)
+    for(int i = 0; i < dataMap.size(); i++)
     {
-        switch(DataMap[i].size)
+        switch(dataMap[i].size)
         {
             case 1:
-                nvs_set_u8(handle, DataMap[i].tag, *static_cast<uint8_t*>(DataMap[i].data));
+                nvs_set_u8(handle, dataMap[i].tag, *static_cast<uint8_t*>(dataMap[i].data));
                 break;
 
             case 2:
-                nvs_set_u16(handle, DataMap[i].tag, *static_cast<uint16_t*>(DataMap[i].data));
+                nvs_set_u16(handle, dataMap[i].tag, *static_cast<uint16_t*>(dataMap[i].data));
                 break;
 
             case 4:
-                nvs_set_u32(handle, DataMap[i].tag, *static_cast<uint32_t*>(DataMap[i].data));
+                nvs_set_u32(handle, dataMap[i].tag, *static_cast<uint32_t*>(dataMap[i].data));
                 break;
 
             default:
-                nvs_set_str(handle, DataMap[i].tag, static_cast<char*>(DataMap[i].data));
+                nvs_set_str(handle, dataMap[i].tag, static_cast<char*>(dataMap[i].data));
                 break;
         }
     }
 
     nvs_commit(handle);
+
+void Config::SetConfigData(const char* tag, uint32_t value)
+{
+    int index = configDataGetIndexOfTag(tag);
+
+    if(index != -1)
+    {
+        switch(dataMap[index].size)
+        {
+            case 1:
+                *static_cast<uint8_t*>(dataMap[index].data) = value;
+                return;
+
+            case 2:
+                *static_cast<uint16_t*>(dataMap[index].data) = value;
+                return;
+
+            case 4:
+                *static_cast<uint32_t*>(dataMap[index].data) = value;
+                return;
+
+            default:
+                return;
+        }
+    }
+}
+
+void Config::SetConfigData(const char* tag, char* value)
+{
+    int index = configDataGetIndexOfTag(tag);
+
+    if((index != -1) && !ConfigDataIsInt(tag))
+        strncpy(static_cast<char*>(dataMap[index].data), value, dataMap[index].size);
 }
