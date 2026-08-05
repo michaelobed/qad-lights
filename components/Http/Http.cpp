@@ -303,12 +303,38 @@ esp_err_t onUriPost(httpd_req_t* request)
         if(http.NetworkList[index].needsPsk)
         {
             tag = strstr(http.Buffer, "psk=");
-            config.SetConfigData("networkPsk", tag + 4);
+            tag += 4;
+
+            /* The PSK arrives percent-encoded, so we have some character replacement to do. */
+            nextToken = tag;
+            while(nextToken != nullptr)
+            {
+                /* Turn '+' into spaces. */
+                nextToken = strchr(nextToken, '+');
+                if(nextToken == nullptr)
+                    break;
+                *nextToken = ' ';
+            }
+
+            /* Turn '%' into whatever the hex number after it is. */
+            nextToken = tag;
+            while(nextToken != nullptr)
+            {
+                nextToken = strchr(nextToken, '%');
+                if(nextToken == nullptr)
+                    break;
+                indexString[0] = *(nextToken + 1);
+                indexString[1] = *(nextToken + 2);
+                indexString[2] = '\0';
+                *nextToken = strtol(indexString, nullptr, 16);
+                strncpy(nextToken + 1, nextToken + 3, request->content_len - (tag - nextToken));
+            }
+            config.SetConfigData("networkPsk", tag);
         }
     }
 
-    http.SendPage(request, pageToSend);
     config.Save();
+    http.SendPage(request, pageToSend);
     return ESP_OK;
 }
 
