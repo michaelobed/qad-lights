@@ -42,6 +42,8 @@ This is the thing the ESP32 really shines at. It has a built-in 2.4GHz WiFi mode
 
 This is easily the thing that took the longest, partly because PWM and WiFi are easy and because I really don't do any web coding! I used the actually rather good built-in ESP HTTP Server library, slapped some pages together in HTML and Javascript, then added Websockets support for good measure, so that config changes and RGB sliders all work in realtime.
 
+I almost forgot to mention the lack of HTTP**S** support: I believe you need to supply your own .pem certificate to use that, and for this simple use case that will never see the light of the Internet, I couldn't be bothered with that. It's a good thing to consider, though, especially given that the password to your WiFi network of choice is otherwise supplied over an unencrypted connection in plaintext using the HTTP POST method. A man-in-the-middle attack is possible I suppose, but improbable and impractical, so I'm not too worried.
+
 ## Final notes
 
 I should point out that I developed this against an ESP-WROOM-32 module sitting on an ESP32-DevKitC board, which is probably really old! I'm sure the code is device-agnostic enough to easily get working on other modules, or even a custom board, but I've done no testing on this. Your mileage may vary, I guess.
