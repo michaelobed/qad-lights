@@ -44,7 +44,11 @@ This is easily the thing that took the longest, partly because PWM and WiFi are 
 
 ## Final notes
 
-I should point out that I developed this against an ESP-WROOM-32 board, which is probably really old! I'm sure the code is device-agnostic enough to easily get working on other modules, or even a custom board, but I've done no testing on this. Your mileage may vary, I guess.
+I should point out that I developed this against an ESP-WROOM-32 module sitting on an ESP32-DevKitC board, which is probably really old! I'm sure the code is device-agnostic enough to easily get working on other modules, or even a custom board, but I've done no testing on this. Your mileage may vary, I guess.
+
+I've included a very rough schematic as a guide on how I put this together. I didn't really use a 5V voltage regulator in practice since the dev board was powered via USB for ease of debugging. I pretty much copied the power circuitry from rgb-switcher, and I see no reason for it not to work here given the similar power domain requirements.
+
+I did have a weird issue where the red LED was quite a bit dimmer than green and blue, even after swapping GPIOs around a bit. I'm not sure whether I just have an old or dud LED strip, a faulty MOSFET or something about the red LEDs' total forward current is out of spec of the MOSFET (it's been a while since I last read the IRF540 datasheet!). It might be worth swapping them out for something like a TIP41C darlington BJT, which I've also used in the past to drive RGB LED strips, though they waste quite a bit of power doing it from my experience!
 
 As always, I'm releasing this under the MIT license so people can fork the repo, modify the code, sell a product based around it or whatever else. I'm just happy this exists and I can stop writing an entire LED driver when I need one!
 
@@ -52,6 +56,7 @@ As always, I'm releasing this under the MIT license so people can fork the repo,
 
 Since I did bash this together, there are a number of things that are missing or that I'm not completely happy with:
 
-- Over-the-air firmware update support. I've provided a partition or two for that, but I've never looked into doing it on the ESP32. It seems simple enough to do, however. Maybe one of you can do it... 😏
-- Support for a variable number of switches. In theory, the logic I have in place makes that feasible, and the `Config` class can easily be extended to allow both the number of switches and their GPIO assignments to be configurable.
-- Make the UI less boring? This one's more of a maybe since I don't really care that much and just wanted it working, but perhaps a square that changes colours next to the RGB sliders could be cool, albeit more colour accurate than the lights will ever be.
+- **Over-the-air firmware update support**. I've provided a partition or two for that, but I've never looked into doing it on the ESP32. It seems simple enough to do, however. Maybe one of you can do it... 😏
+- **Support for a variable number of switches**. In theory, the logic I have in place makes that feasible, and the `Config` class can easily be extended to allow both the number of switches and their GPIO assignments to be configurable.
+- **Make the UI less boring**? This one's more of a maybe since I don't really care that much and just wanted it working, but perhaps a square that changes colours next to the RGB sliders could be cool, albeit more colour accurate than the lights will ever be.
+- **Sleep mode**! These should be able to go to sleep when sitting there for ages doing nothing, then wake up and drive the LEDs when the door is opened. This should be easy enough to set up as a wake-up interrupt of some kind.
