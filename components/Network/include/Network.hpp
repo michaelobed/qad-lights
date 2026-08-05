@@ -35,6 +35,7 @@ class Network
         esp_err_t StartSTASearch(std::vector<WifiInfo>& list);
 
     private:
+        static constexpr uint32_t deInitDelayUs = 1000000UL;
         static constexpr int maxConnections = 3;
         esp_netif_t* netIfInstance;
         wifi_config_t wifiConfig;

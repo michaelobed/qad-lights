@@ -30,7 +30,7 @@ static void switchIOTask(void* arg);
 extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
-    bool isSTA = config.GetConfigData("networkIsSTA");
+    bool isSTA = false;
 
     /* Initialise a default event loop. */
     err = esp_event_loop_create_default();
@@ -75,7 +75,8 @@ extern "C" void app_main()
         errorHandler();
     }
 
-    /* We have all the information we need. Start the WiFi! */
+    /* Start the WiFi! */
+    isSTA = (config.GetConfigData("networkIsSTA") == 1);
     if(isSTA)
     {
         err = network.InitSTA();
@@ -84,7 +85,7 @@ extern "C" void app_main()
             ESP_LOGW(__func__, "Could not start WiFi connection to network (%d)! Reverting to access point mode.", err);
             isSTA = false;
         }
-        else ESP_LOGI(__func__, "WiFi connected to network successfully.");
+        else ESP_LOGI(__func__, "WiFi connection to network started successfully.");
     }
 
     if(!isSTA)

@@ -23,6 +23,13 @@ Network::Network()
 void Network::DeInit()
 {
     mdns_free();
+    if(config.GetConfigData("networkIsSTA"))
+    {
+        /* Give it a moment.
+         * There's some asynchronicity to this process and I don't want to write an event handler just for this. */
+        esp_wifi_disconnect();
+        esp_rom_delay_us(deInitDelayUs);
+    }
     esp_wifi_stop();
     ESP_LOGI(__func__, "Network de-initialised.");
 }
@@ -119,6 +126,13 @@ esp_err_t Network::postInit()
     err = esp_wifi_start();
     if(err != ESP_OK)
         return err;
+
+    if(isSTA)
+    {
+        err = esp_wifi_connect();
+        if(err != ESP_OK)
+            return err;
+    }
 
     /* Start mDNS so we're not memorising the IP address just to log into this! */
     err = mdns_init();
