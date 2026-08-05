@@ -13,13 +13,14 @@
 Config::Config()
 {
     /* Default values go here. */
+    strncpy(hostname, "qad-lights", hostnameMaxLen);
     lightingColour = 0xffffff;
     lightingMode = LEDMode_On;
-    strncpy(hostname, "qad-lights", hostnameMaxLen);
     networkIsSTA = false;
     strncpy(networkSsid, "YourNetworkHere", MAX_SSID_LEN);
     memset(networkPsk, 0, MAX_PASSPHRASE_LEN);
     shouldRestart = false;
+    switchPolarity = SwPol_NormallyClosed;
 }
 
 int Config::configDataGetIndexOfTag(const char* tag)
