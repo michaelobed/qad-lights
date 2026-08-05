@@ -56,9 +56,10 @@ As always, I'm releasing this under the MIT license so people can fork the repo,
 
 ## What next?
 
-Since I did bash this together, there are a number of things that are missing or that I'm not completely happy with:
+Since I did bash this together, there are a number of things that are missing or that I'm not completely happy with (in no particular order):
 
 - **Over-the-air firmware update support**. I've provided a partition or two for that, but I've never looked into doing it on the ESP32. It seems simple enough to do, however. Maybe one of you can do it... 😏
 - **Support for a variable number of switches**. In theory, the logic I have in place makes that feasible, and the `Config` class can easily be extended to allow both the number of switches and their GPIO assignments to be configurable.
 - **Make the UI less boring**? This one's more of a maybe since I don't really care that much and just wanted it working, but perhaps a square that changes colours next to the RGB sliders could be cool, albeit more colour accurate than the lights will ever be.
 - **Sleep mode**! These should be able to go to sleep when sitting there for ages doing nothing, then wake up and drive the LEDs when the door is opened. This should be easy enough to set up as a wake-up interrupt of some kind.
+- **Configurable fade time**. This was actually supposed to be in the `Config` class too, but I just haven't gotten around to it.
