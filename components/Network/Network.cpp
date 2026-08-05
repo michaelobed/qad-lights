@@ -24,7 +24,7 @@ void Network::DeInit()
 {
     mdns_free();
     esp_wifi_stop();
-    ESP_LOGW(__func__, "Network de-initialised.");
+    ESP_LOGI(__func__, "Network de-initialised.");
 }
 
 esp_err_t Network::InitAP()

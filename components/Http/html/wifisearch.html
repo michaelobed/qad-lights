@@ -29,13 +29,13 @@
                 </tr>
                 <tr>
                     <td><label for="psk" id="psklabel">Password:</label></td>
-                    <td><input type="password" class="passwordBox" id="psk" name="psk" form="networkform" /></td>
+                    <td><input type="password" class="passwordBox" maxlength="64" id="psk" name="psk" form="networkform" /></td>
                 </tr>
             </table>
         </p>
         <p>
             <input type="button" class="buttonNavigation" value="Back" onclick="goHome();" />
-            <input type="submit" class="buttonNavigation" id="buttonGo" value="Go!" form="networkform" />
+            <input type="submit" class="buttonNavigation" id="buttonGo" value="Go!" disabled="true" form="networkform" />
         </p>
     <script>
         function goHome() {

@@ -36,8 +36,8 @@
         <h2>Behaviour</h2>
         <p>
             <p>
-                <label for="ledmode">LED mode</label>
-                <select id="ledmode" onchange="onLedMode(true);">
+                <label for="lightingmode">Lighting mode</label>
+                <select id="lightingmode" onchange="onLightingMode(this, true);">
                     <option value="0">Off</option>
                     <option value="1">On when any switch is active</option>
                     <option value="2">On when all switches are active</option>
@@ -45,8 +45,8 @@
                 </select>
             </p>
             <p>
-                <label for="swpol" id="swpollabel">Switch polarity</label>
-                <select id="swpol" onchange="onSwitchPolarity()">
+                <label for="switchpolarity" id="switchpolaritylabel">Switch polarity</label>
+                <select id="switchpolarity" onchange="onSwitchPolarity(this, true)">
                     <option value="0">Normally open</option>
                     <option value="1">Normally closed</option>
                 </select>
@@ -56,11 +56,11 @@
         <h2>Network</h2>
         <p>
             <label for="hostname">Hostname</label>
-            <input type="text" class="textBox" id="hostname" value="[[CONFIG_NETWORKHOSTNAME]]" onchange="onHostname();" />
+            <input type="text" class="textBox" id="hostname" value="[[CONFIG_NETWORKHOSTNAME]]" onchange="onHostname(this);" />
         </p>
         <p>
             <label for="wifimode">WiFi mode</label>
-            <select id="wifimode" onchange="onWifiMode();">
+            <select id="wifimode" onchange="onWifiMode(this, true);">
                 <option value="0">Access point</option>
                 <option value="1">Connect to network</option>
             </select>
@@ -84,32 +84,34 @@
                 }
             });
 
-            function onLedMode(fromUI) {
-                var ledMode = document.getElementById("ledmode").value;
-                var swpol = document.getElementById("swpol");
-                var swpolLabel = document.getElementById("swpollabel");
-                var shouldHide = (ledMode == "off");
-                
-                swpol.hidden = shouldHide;
-                swpolLabel.hidden = shouldHide;
-
-                if(fromUI)
-                    ws.send(`lightingMode: ${ledMode}`);
-            }
-
-            function onHostname() {
-                var hostnameVal = document.getElementById("hostname").value;
+            function onHostname(text) {
+                var hostnameVal = text.value;
                 ws.send(`networkHostname: ${hostnameVal}`);
             }
 
-            function onLoad() {
-                onLedMode(false);
-                onWifiMode();
+            function onLightingMode(dropdown, fromUI) {
+                var lightingMode = dropdown.value;
+                var switchpolarity = document.getElementById("switchpolarity");
+                var switchpolaritylabel = document.getElementById("switchpolaritylabel");
+                var shouldHide = (lightingMode == "off");
+                
+                switchpolarity.hidden = shouldHide;
+                switchpolaritylabel.hidden = shouldHide;
 
+                if(fromUI) {
+                    ws.send(`lightingMode: ${lightingMode}`);
+                }
+            }
+
+            function onLoad() {
                 /* We have to set the values of the dropdowns here because doing it in HTML is nasty. */
-                document.getElementById("ledmode").value = "[[CONFIG_LIGHTINGMODE]]";
-                document.getElementById("wifimode").value = "[[CONFIG_WIFIMODE]]";
-                document.getElementById("swpol").value = "[[CONFIG_SWITCHPOLARITY]]";
+                document.getElementById("lightingmode").value = "[[CONFIG_LIGHTINGMODE]]";
+                document.getElementById("wifimode").value = "[[CONFIG_NETWORKISSTA]]";
+                document.getElementById("switchpolarity").value = "[[CONFIG_SWITCHPOLARITY]]";
+
+                onLightingMode(document.getElementById("lightingmode"), false);
+                onWifiMode(document.getElementById("wifimode"));
+
             }
 
             function onRgbSlider(slider, text) {
@@ -127,20 +129,26 @@
                 ws.send("save");
             }
 
-            function onSwitchPolarity() {
-                var swPolVal = document.getElementById("swpol").value;
-                ws.send(`switchPolarity: ${swPolVal}`);
+            function onSwitchPolarity(dropdown, fromUI) {
+                var swPolVal = dropdown.value;
+                if(fromUI) {
+                    ws.send(`switchPolarity: ${swPolVal}`);
+                }
             }
 
             function onUnload() {
                 ws.close();
             }
 
-            function onWifiMode() {
+            function onWifiMode(dropdown, fromUI) {
                 var wifiSearchHider = document.getElementById("wifisearchhider");
-                var shouldHide = (document.getElementById("wifimode").value == "0");
+                var isSTAVal = dropdown.selectedIndex;
+                var shouldHide = (isSTAVal == 0);
 
                 wifiSearchHider.hidden = shouldHide;
+                if(fromUI) {
+                    ws.send(`networkIsSTA: ${isSTAVal}`);
+                }
             }
 
             function onWifiSearch(button) {

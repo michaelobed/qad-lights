@@ -78,7 +78,6 @@ bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
     if(strstr(data, tagSave) != nullptr)
     {
         shouldRestart = config.Save();
-        ESP_LOGI(__func__, "Config saved.");
 
         /* Deal with the case where changes trigger restarts. */
         if(shouldRestart)
@@ -98,7 +97,7 @@ bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
 
     else if(strstr(data, tagLoadedRestart) != nullptr)
     {
-        ESP_LOGW(__func__, "Restart triggered via Websocket, will restart now!");
+        ESP_LOGW(__func__, "Restart triggered via Websocket, beginning restart.");
         Restart();
         while(true);
     }
@@ -207,12 +206,12 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 
         config.GetConfigData("networkHostname", &hostname);
         newHtml = doReplacement(newHtml, "[[CONFIG_NETWORKHOSTNAME]]", hostname);
+
+        itoa(config.GetConfigData("networkIsSTA") ? 1 : 0, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[CONFIG_NETWORKISSTA]]", tempBuf);
         
         itoa(config.GetConfigData("switchPolarity"), tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_SWITCHPOLARITY]]", tempBuf);
-
-        itoa(config.GetConfigData("networkIsSTA") ? 1 : 0, tempBuf, 10);
-        newHtml = doReplacement(newHtml, "[[CONFIG_WIFIMODE]]", tempBuf);
 
         if(strstr(newHtml, tagNetworkList) != nullptr)
             networkListAsSelect(newHtml, tagNetworkList);
@@ -277,7 +276,6 @@ esp_err_t onUriPost(httpd_req_t* request)
          * For the record, I really hate that we're sending passwords in plaintext via POST, but whatever. It's quick-and-dirty for a reason... */
         memset(http.Buffer, 0, http.BufferSize);
         err = httpd_req_recv(request, http.Buffer, request->content_len);
-        ESP_LOGI(__func__, "Successfully received %d bytes", request->content_len);
 
         /* If the socket was closed, abort everything. */
         if(err == 0)

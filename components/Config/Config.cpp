@@ -189,8 +189,9 @@ bool Config::Save()
                 break;
         }
     }
-
     nvs_commit(handle);
+
+    ESP_LOGW(__func__, "Config saved%s.", shouldRestart ? ", will require restart to take effect" : "");
 
     /* Return whether a restart is required for changes to take effect. */
     return shouldRestart;

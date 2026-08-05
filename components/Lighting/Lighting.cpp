@@ -54,7 +54,7 @@ void Lighting::DeInit()
     configChannel.channel = LEDC_CHANNEL_2;
     ledc_channel_config(&configChannel);
 
-    ESP_LOGW(__func__, "Lighting de-initialised.");
+    ESP_LOGI(__func__, "Lighting de-initialised.");
 }
 
 void Lighting::doChange(uint8_t r, uint8_t g, uint8_t b, int fadeTime, bool fade)

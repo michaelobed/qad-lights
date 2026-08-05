@@ -130,6 +130,8 @@ void Restart()
     vTaskDelete(switchIOTaskHandle);
     lighting.DeInit();
     network.DeInit();
+
+    ESP_LOGW(__func__, "*** RESET!!! ***");
     esp_restart();
 }
 
