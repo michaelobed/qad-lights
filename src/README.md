@@ -44,6 +44,8 @@ This is easily the thing that took the longest, partly because PWM and WiFi are 
 
 ## Final notes
 
+I should point out that I developed this against an ESP-WROOM-32 board, which is probably really old! I'm sure the code is device-agnostic enough to easily get working on other modules, or even a custom board, but I've done no testing on this. Your mileage may vary, I guess.
+
 As always, I'm releasing this under the MIT license so people can fork the repo, modify the code, sell a product based around it or whatever else. I'm just happy this exists and I can stop writing an entire LED driver when I need one!
 
 ## What next?

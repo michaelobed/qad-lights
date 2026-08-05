@@ -52,7 +52,7 @@ bool SwitchIO::Update()
     bool allOn = true;
     bool anyOn = false;
     bool isNc = (config.GetConfigData("switchPolarity") == Config::SwPol_NormallyClosed);
-    int_least32_t lightingMode = config.GetConfigData("lightingMode");
+    int lightingMode = config.GetConfigData("lightingMode");
     bool state = false;
 
     if(lightingMode == Config::LEDMode_Off)
