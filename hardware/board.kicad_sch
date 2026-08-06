@@ -1888,8 +1888,9 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Transistor_FET:IRF540N"
+		(symbol "Transistor_BJT:TIP41C"
 			(pin_names
+				(offset 0)
 				(hide yes)
 			)
 			(exclude_from_sim no)
@@ -1898,7 +1899,7 @@
 			(in_pos_files yes)
 			(duplicate_pin_numbers_are_jumpers no)
 			(property "Reference" "Q"
-				(at 5.08 1.905 0)
+				(at 6.35 1.905 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(effects
@@ -1908,8 +1909,8 @@
 					(justify left)
 				)
 			)
-			(property "Value" "IRF540N"
-				(at 5.08 0 0)
+			(property "Value" "TIP41C"
+				(at 6.35 0 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(effects
@@ -1920,7 +1921,7 @@
 				)
 			)
 			(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
-				(at 5.08 -1.905 0)
+				(at 6.35 -1.905 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(hide yes)
@@ -1932,8 +1933,8 @@
 					(justify left)
 				)
 			)
-			(property "Datasheet" "http://www.irf.com/product-info/datasheets/data/irf540n.pdf"
-				(at 5.08 -3.81 0)
+			(property "Datasheet" "https://www.centralsemi.com/get_document.php?cmp=1&mergetype=pd&mergepath=pd&pdf_id=tip41.PDF"
+				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
 				(hide yes)
@@ -1944,7 +1945,7 @@
 					(justify left)
 				)
 			)
-			(property "Description" "33A Id, 100V Vds, HEXFET N-Channel MOSFET, TO-220"
+			(property "Description" "6A Ic, 100V Vce, Power NPN Transistor, TO-220"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -1955,7 +1956,29 @@
 					)
 				)
 			)
-			(property "ki_keywords" "HEXFET N-Channel MOSFET"
+			(property "Sim.Device" "NPN"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Sim.Pins" "1=B 2=C 3=E"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "power NPN Transistor"
 				(at 0 0 0)
 				(show_name no)
 				(do_not_autoplace no)
@@ -1977,22 +2000,10 @@
 					)
 				)
 			)
-			(symbol "IRF540N_0_1"
+			(symbol "TIP41C_0_1"
 				(polyline
 					(pts
-						(xy 0.254 1.905) (xy 0.254 -1.905)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.254 0) (xy -2.54 0)
+						(xy -2.54 0) (xy 0.635 0)
 					)
 					(stroke
 						(width 0)
@@ -2004,81 +2015,10 @@
 				)
 				(polyline
 					(pts
-						(xy 0.762 2.286) (xy 0.762 1.27)
+						(xy 0.635 1.905) (xy 0.635 -1.905)
 					)
 					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.762 0.508) (xy 0.762 -0.508)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.762 -1.27) (xy 0.762 -2.286)
-					)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0.762 -1.778) (xy 3.302 -1.778) (xy 3.302 1.778) (xy 0.762 1.778)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.016 0) (xy 2.032 0.381) (xy 2.032 -0.381) (xy 1.016 0)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(circle
-					(center 1.651 0)
-					(radius 2.794)
-					(stroke
-						(width 0.254)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.54 2.54) (xy 2.54 1.778)
-					)
-					(stroke
-						(width 0)
+						(width 0.508)
 						(type default)
 					)
 					(fill
@@ -2086,57 +2026,10 @@
 					)
 				)
 				(circle
-					(center 2.54 1.778)
-					(radius 0.254)
+					(center 1.27 0)
+					(radius 2.8194)
 					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(circle
-					(center 2.54 -1.778)
-					(radius 0.254)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.54 -2.54) (xy 2.54 0) (xy 0.762 0)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.794 0.508) (xy 2.921 0.381) (xy 3.683 0.381) (xy 3.81 0.254)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.302 0.381) (xy 2.921 -0.254) (xy 3.683 -0.254) (xy 3.302 0.381)
-					)
-					(stroke
-						(width 0)
+						(width 0.254)
 						(type default)
 					)
 					(fill
@@ -2144,11 +2037,47 @@
 					)
 				)
 			)
-			(symbol "IRF540N_1_1"
+			(symbol "TIP41C_1_1"
+				(polyline
+					(pts
+						(xy 0.635 0.635) (xy 2.54 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 -0.635) (xy 2.54 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 -1.778) (xy 1.778 -1.27) (xy 2.286 -2.286) (xy 1.27 -1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(pin input line
 					(at -5.08 0 0)
 					(length 2.54)
-					(name "G"
+					(name "B"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2166,7 +2095,7 @@
 				(pin passive line
 					(at 2.54 5.08 270)
 					(length 2.54)
-					(name "D"
+					(name "C"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2184,7 +2113,7 @@
 				(pin passive line
 					(at 2.54 -5.08 90)
 					(length 2.54)
-					(name "S"
+					(name "E"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3809,6 +3738,116 @@
 		)
 	)
 	(symbol
+		(lib_id "Transistor_BJT:TIP41C")
+		(at 228.6 130.81 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "4ae959f4-051b-4815-85e7-8014d5ff2ab5")
+		(property "Reference" "Q3"
+			(at 233.68 129.5399 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "TIP41C"
+			(at 233.68 132.0799 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
+			(at 234.95 132.715 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left)
+			)
+		)
+		(property "Datasheet" "https://www.centralsemi.com/get_document.php?cmp=1&mergetype=pd&mergepath=pd&pdf_id=tip41.PDF"
+			(at 228.6 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Description" "6A Ic, 100V Vce, Power NPN Transistor, TO-220"
+			(at 228.6 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" "NPN"
+			(at 228.6 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" "1=B 2=C 3=E"
+			(at 228.6 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "1528584a-bd0f-4851-b559-cd5c9baf3585")
+		)
+		(pin "1"
+			(uuid "88302aa6-ea0a-462c-a702-62a08a213ae3")
+		)
+		(pin "3"
+			(uuid "7dc50ebf-8584-4d2c-802f-31be1dea2df2")
+		)
+		(instances
+			(project "board"
+				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
+					(reference "Q3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+3V3")
 		(at 248.92 153.67 0)
 		(unit 1)
@@ -4037,94 +4076,6 @@
 			(project "board"
 				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
 					(reference "#PWR010")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Transistor_FET:IRF540N")
-		(at 228.6 102.87 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "625c0663-8061-433b-aa88-3c7c90414b32")
-		(property "Reference" "Q2"
-			(at 234.95 101.5999 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "IRF540N"
-			(at 234.95 104.1399 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
-			(at 233.68 104.775 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(italic yes)
-				)
-				(justify left)
-			)
-		)
-		(property "Datasheet" "http://www.irf.com/product-info/datasheets/data/irf540n.pdf"
-			(at 233.68 106.68 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Description" "33A Id, 100V Vds, HEXFET N-Channel MOSFET, TO-220"
-			(at 228.6 102.87 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "9a1f4ca8-517b-4cfb-ade7-ec505b37d6c9")
-		)
-		(pin "3"
-			(uuid "34b5fc9a-4654-4f25-b4af-c97d4c4df63f")
-		)
-		(pin "1"
-			(uuid "f243f08d-007e-4da6-81ba-36414cd8071f")
-		)
-		(instances
-			(project "board"
-				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
-					(reference "Q2")
 					(unit 1)
 				)
 			)
@@ -4550,6 +4501,116 @@
 			(project "board"
 				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
 					(reference "SW2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Transistor_BJT:TIP41C")
+		(at 228.6 74.93 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "812121ea-01bb-4467-9e6f-d05c951d3864")
+		(property "Reference" "Q1"
+			(at 233.68 73.6599 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "TIP41C"
+			(at 233.68 76.1999 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
+			(at 234.95 76.835 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left)
+			)
+		)
+		(property "Datasheet" "https://www.centralsemi.com/get_document.php?cmp=1&mergetype=pd&mergepath=pd&pdf_id=tip41.PDF"
+			(at 228.6 74.93 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Description" "6A Ic, 100V Vce, Power NPN Transistor, TO-220"
+			(at 228.6 74.93 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" "NPN"
+			(at 228.6 74.93 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" "1=B 2=C 3=E"
+			(at 228.6 74.93 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "07f7cf3f-c080-49f7-ac84-9fe2374397d5")
+		)
+		(pin "1"
+			(uuid "15056f28-10a9-4b3b-bc20-c5d12aea7e70")
+		)
+		(pin "3"
+			(uuid "1fdaf1cd-9ed6-4b04-95d8-e0a914144902")
+		)
+		(instances
+			(project "board"
+				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
+					(reference "Q1")
 					(unit 1)
 				)
 			)
@@ -5034,94 +5095,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Transistor_FET:IRF540N")
-		(at 228.6 74.93 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "9bf49757-34ab-488a-a51d-7671a4b9aa46")
-		(property "Reference" "Q1"
-			(at 234.95 73.6599 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "IRF540N"
-			(at 234.95 76.1999 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
-			(at 233.68 76.835 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(italic yes)
-				)
-				(justify left)
-			)
-		)
-		(property "Datasheet" "http://www.irf.com/product-info/datasheets/data/irf540n.pdf"
-			(at 233.68 78.74 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Description" "33A Id, 100V Vds, HEXFET N-Channel MOSFET, TO-220"
-			(at 228.6 74.93 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "f70d625c-4171-4c96-be37-8bb6547ba38a")
-		)
-		(pin "3"
-			(uuid "daa74225-ec18-41bd-ad11-53502c1a764e")
-		)
-		(pin "1"
-			(uuid "4204a2b6-10dc-4307-b13a-ffb25c09c1af")
-		)
-		(instances
-			(project "board"
-				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
-					(reference "Q1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 63.5 91.44 0)
 		(unit 1)
@@ -5272,94 +5245,6 @@
 			(project "board"
 				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
 					(reference "#PWR014")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Transistor_FET:IRF540N")
-		(at 228.6 130.81 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "d7e27505-b13b-44c3-a906-2f0f4d22f965")
-		(property "Reference" "Q3"
-			(at 234.95 129.5399 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "IRF540N"
-			(at 234.95 132.0799 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
-			(at 233.68 132.715 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(italic yes)
-				)
-				(justify left)
-			)
-		)
-		(property "Datasheet" "http://www.irf.com/product-info/datasheets/data/irf540n.pdf"
-			(at 233.68 134.62 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Description" "33A Id, 100V Vds, HEXFET N-Channel MOSFET, TO-220"
-			(at 228.6 130.81 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "2"
-			(uuid "4279f822-3ca3-43a8-bdc7-a3857a39bafd")
-		)
-		(pin "3"
-			(uuid "bb378c52-c739-4d29-b05c-676c119e81f9")
-		)
-		(pin "1"
-			(uuid "a083f1b0-be44-4633-8fae-2f055ba2a860")
-		)
-		(instances
-			(project "board"
-				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
-					(reference "Q3")
 					(unit 1)
 				)
 			)
@@ -5525,6 +5410,116 @@
 			(project "board"
 				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
 					(reference "#PWR08")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Transistor_BJT:TIP41C")
+		(at 228.6 102.87 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "e7f97032-85f0-440f-8ddc-360960b42c59")
+		(property "Reference" "Q2"
+			(at 233.68 101.5999 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "TIP41C"
+			(at 233.68 104.1399 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_THT:TO-220-3_Vertical"
+			(at 234.95 104.775 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left)
+			)
+		)
+		(property "Datasheet" "https://www.centralsemi.com/get_document.php?cmp=1&mergetype=pd&mergepath=pd&pdf_id=tip41.PDF"
+			(at 228.6 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Description" "6A Ic, 100V Vce, Power NPN Transistor, TO-220"
+			(at 228.6 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Device" "NPN"
+			(at 228.6 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Sim.Pins" "1=B 2=C 3=E"
+			(at 228.6 102.87 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "2"
+			(uuid "b7fc251b-f145-4509-a435-b61787a177dc")
+		)
+		(pin "1"
+			(uuid "2f5ce4d3-1383-46e9-bf57-9fcbb64f003f")
+		)
+		(pin "3"
+			(uuid "dc101513-08f0-4ae3-9cf8-a51540cf8314")
+		)
+		(instances
+			(project "board"
+				(path "/89488de0-fda3-4ac5-bd6a-81fa73d596c6"
+					(reference "Q2")
 					(unit 1)
 				)
 			)
