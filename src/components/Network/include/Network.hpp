@@ -32,6 +32,7 @@ class Network
         void DeInit();
         esp_err_t InitAP();
         esp_err_t InitSTA();
+        bool IsRunning();
         esp_err_t StartSTASearch(std::vector<WifiInfo>& list);
 
     private:

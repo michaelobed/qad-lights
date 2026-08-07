@@ -9,6 +9,7 @@
 #include "Config.hpp"
 #include <cstring>
 #include "esp_log.h"
+#include "esp_sleep.h"
 #include "SwitchIO.hpp"
 
 static Config& config = Config::GetInstance();
@@ -27,7 +28,7 @@ SwitchIO::SwitchIO()
 
 esp_err_t SwitchIO::Configure()
 {
-    gpio_config_t config =
+    gpio_config_t configGpio =
     {
         .pin_bit_mask = 0,
         .mode = GPIO_MODE_INPUT,
@@ -36,13 +37,23 @@ esp_err_t SwitchIO::Configure()
         .intr_type = GPIO_INTR_DISABLE
     };
     esp_err_t err = ESP_OK;
+    int i = 0;
+    bool isNc = (config.GetConfigData("switchPolarity") == Config::SwPol_NormallyClosed);
 
-    for(int i = 0; i < NumSwitches; i++)
-        config.pin_bit_mask |= (0x01 << switches[i]);
+    for(i = 0; i < NumSwitches; i++)
+        configGpio.pin_bit_mask |= (0x01 << switches[i]);
 
-    err = gpio_config(&config);
+    err = gpio_config(&configGpio);
     if(err != ESP_OK)
+    {
         ESP_LOGE(__func__, "Could not configure GPIO for switches (%d)!", err);
+        return err;
+    }
+
+    /* Set up the switches as sleep wakeup sources. */
+    for(i = 0; i < NumSwitches; i++)
+        gpio_wakeup_enable(switches[i], isNc ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+    esp_sleep_enable_gpio_wakeup();
 
     return err;
 }

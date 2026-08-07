@@ -14,6 +14,7 @@ extern "C"
 {
 #endif
     void Restart();
+    void Sleep();
 
 #ifndef __cplusplus
 };

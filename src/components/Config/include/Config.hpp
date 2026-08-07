@@ -39,6 +39,12 @@ class Config
             SwPol_NormallyClosed
         };
 
+        enum SleepMode : uint8_t
+        {
+            SleepMode_Never = 0,
+            SleepMode_WhenLEDOff
+        };
+
         Config();
 
         static Config& GetInstance()
@@ -69,6 +75,7 @@ class Config
         char networkPsk[MAX_PASSPHRASE_LEN];
         char networkSsid[MAX_SSID_LEN];
         bool shouldRestart;
+        int sleepMode;
         int switchPolarity;
 
         const std::vector<ConfigData> dataMap =
@@ -79,7 +86,8 @@ class Config
             {   "networkIsSTA",     &networkIsSTA,      1,                  true },
             {   "networkPsk",       &networkPsk,        MAX_PASSPHRASE_LEN, true },
             {   "networkSsid",      &networkSsid,       MAX_SSID_LEN,       true },
-            {   "switchPolarity",   &switchPolarity,    1,                  false }
+            {   "switchPolarity",   &switchPolarity,    1,                  false },
+            {   "sleepMode",        &sleepMode,         1,                  false }
         };
 
         int configDataGetIndexOfTag(const char* tag);

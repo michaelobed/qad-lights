@@ -30,7 +30,7 @@ class Http
             return h;
         }
 
-        static constexpr int BufferSize = 8192;
+        static constexpr int BufferSize = 10240;
         char Buffer[BufferSize];
         std::vector<Network::WifiInfo> NetworkList;
         StateType State;

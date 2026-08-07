@@ -209,6 +209,9 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
 
         itoa(config.GetConfigData("networkIsSTA") ? 1 : 0, tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_NETWORKISSTA]]", tempBuf);
+
+        itoa(config.GetConfigData("sleepMode"), tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[CONFIG_SLEEPMODE]]", tempBuf);
         
         itoa(config.GetConfigData("switchPolarity"), tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_SWITCHPOLARITY]]", tempBuf);

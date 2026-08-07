@@ -20,6 +20,7 @@ Config::Config()
     strncpy(networkSsid, "YourNetworkHere", MAX_SSID_LEN);
     memset(networkPsk, 0, MAX_PASSPHRASE_LEN);
     shouldRestart = false;
+    sleepMode = SleepMode_Never;
     switchPolarity = SwPol_NormallyClosed;
 }
 
