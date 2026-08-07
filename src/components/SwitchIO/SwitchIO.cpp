@@ -55,9 +55,9 @@ bool SwitchIO::Update()
     int lightingMode = config.GetConfigData("lightingMode");
     bool state = false;
 
-    if(lightingMode == Config::LEDMode_Off)
+    if(lightingMode == Config::LightingMode_Off)
         return false;
-    else if(lightingMode == Config::LEDMode_On)
+    else if(lightingMode == Config::LightingMode_On)
         return true;
 
     /* We're here because the config depends on switch states, so read them and perform logic. */
@@ -71,7 +71,7 @@ bool SwitchIO::Update()
     }
 
     /* Return what the effective state of the lights should be. */
-    if(lightingMode == Config::LEDMode_OnAny)
+    if(lightingMode == Config::LightingMode_OnAny)
         return anyOn;
     else return allOn;
 }

@@ -25,12 +25,12 @@ class Config
             bool willTriggerRestart;
         };
 
-        enum LEDMode : uint8_t
+        enum LightingMode : uint8_t
         {
-            LEDMode_Off = 0,            /* Permanently off. */
-            LEDMode_OnAny,              /* On if any switches are active. */
-            LEDMode_OnAll,              /* On if all switches are active. */
-            LEDMode_On                  /* Permanently on. */
+            LightingMode_Off = 0,           /* Permanently off. */
+            LightingMode_OnAny,             /* On if any switches are active. */
+            LightingMode_OnAll,             /* On if all switches are active. */
+            LightingMode_On                 /* Permanently on. */
         };
 
         enum SwPol : uint8_t
