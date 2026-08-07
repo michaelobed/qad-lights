@@ -33,9 +33,9 @@ class Lighting
         int fadeTimeMsOff;
         int fadeTimeMsOn;
         bool on;
-        static constexpr int pinB = 4;
-        static constexpr int pinG = 0;
-        static constexpr int pinR = 2;
+        static constexpr int pinB = 27;
+        static constexpr int pinG = 26;
+        static constexpr int pinR = 25;
 
         void doChange(uint8_t r, uint8_t g, uint8_t b, int fadeTime, bool fade);
 };
