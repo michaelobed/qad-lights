@@ -14,7 +14,7 @@
 
     <body onload="onLoad()" onunload="onUnload()">
         <h1>Quick-and-Dirty Lights</h1>
-        <p id="status"><i></i></p>
+        <p id="status"></p>
         <h2>Colours</h2>
         <p>
             <p>
@@ -188,7 +188,7 @@
 
             function updateStatus(statusText, colour = "black") {
                 var status = document.getElementById("status");
-                status.innerText = statusText;
+                status.innerHTML = "<i>" + statusText + "</i>";
                 status.style.colour = colour;
             }
         </script>
