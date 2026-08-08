@@ -55,6 +55,28 @@ esp_err_t SwitchIO::Configure()
         gpio_wakeup_enable(switches[i], isNc ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
     esp_sleep_enable_gpio_wakeup();
 
+    /* Set up everything else as a pulled-down input. */
+    for(int io : allIo)
+    {
+        gpio_num_t ioCast = static_cast<gpio_num_t>(io);
+        bool willConfigure = true;
+
+        for(i = 0; i < NumSwitches; i++)
+        {
+            if(io == switches[i])
+            {
+                willConfigure = false;
+                break;
+            }
+        }
+
+        if(willConfigure)
+        {
+            gpio_set_direction(ioCast, GPIO_MODE_INPUT);
+            gpio_pulldown_en(ioCast);
+        }
+    }
+
     return err;
 }
 

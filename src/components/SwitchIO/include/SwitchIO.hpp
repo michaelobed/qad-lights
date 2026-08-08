@@ -28,6 +28,11 @@ class SwitchIO
         bool Update();
 
     private:
+        static constexpr int allIo[] =
+        {
+            0, 2, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 32, 33
+        };
+
         gpio_isr_handle_t isrHandle;
         static constexpr int switchesMaxLen = 8;
         gpio_num_t switches[switchesMaxLen];
