@@ -129,21 +129,23 @@ void Restart()
     constexpr uint32_t delayUs = 3000000UL;
 
     esp_rom_delay_us(delayUs);
+    ESP_LOGW(__func__, "*** RESET!!! ***");
     vTaskDelete(switchIOTaskHandle);
     lighting.DeInit();
     if(network.IsRunning())
         network.DeInit();
 
-    ESP_LOGW(__func__, "*** RESET!!! ***");
     esp_restart();
 }
 
 void Sleep()
 {
+    /* Currently unused - see issue #3. */
+
+    ESP_LOGW(__func__, "Sleeping now... -.-");
     if(network.IsRunning())
         network.DeInit();
     lighting.WaitForLEDsOff();
-    ESP_LOGW(__func__, "Sleeping now... -.-");
     esp_light_sleep_start();
     ESP_LOGW(__func__, "I'm awake! ^_^");
 }
@@ -161,8 +163,9 @@ void switchIOTask(void* arg)
             lightingStateLast = lightingState;
         }
 
-        if((config.GetConfigData("sleepMode") == Config::SleepMode_WhenLEDOff) && !lightingState)
-            Sleep();
+        /* We don't do this currently - see issue #3. */
+        // if((config.GetConfigData("sleepMode") == Config::SleepMode_WhenLEDOff) && !lightingState)
+        //     Sleep();
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
