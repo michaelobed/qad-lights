@@ -163,3 +163,10 @@ void Lighting::SetState(bool isOn)
         doChange(colour[0], colour[1], colour[2], fadeTimeMsOn, true);
     else doChange(0x00, 0x00, 0x00, fadeTimeMsOff, true);
 }
+
+void Lighting::WaitForLEDsOff()
+{
+    while(  (ledc_get_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0) != 0x00) ||
+            (ledc_get_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_1) != 0x00) ||
+            (ledc_get_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_2) != 0x00));
+}

@@ -25,18 +25,24 @@ class Config
             bool willTriggerRestart;
         };
 
-        enum LEDMode : uint8_t
+        enum LightingMode : uint8_t
         {
-            LEDMode_Off = 0,            /* Permanently off. */
-            LEDMode_OnAny,              /* On if any switches are active. */
-            LEDMode_OnAll,              /* On if all switches are active. */
-            LEDMode_On                  /* Permanently on. */
+            LightingMode_Off = 0,           /* Permanently off. */
+            LightingMode_OnAny,             /* On if any switches are active. */
+            LightingMode_OnAll,             /* On if all switches are active. */
+            LightingMode_On                 /* Permanently on. */
         };
 
         enum SwPol : uint8_t
         {
             SwPol_NormallyOpen = 0,
             SwPol_NormallyClosed
+        };
+
+        enum SleepMode : uint8_t
+        {
+            SleepMode_Never = 0,
+            SleepMode_WhenLEDOff
         };
 
         Config();
@@ -69,6 +75,7 @@ class Config
         char networkPsk[MAX_PASSPHRASE_LEN];
         char networkSsid[MAX_SSID_LEN];
         bool shouldRestart;
+        int sleepMode;
         int switchPolarity;
 
         const std::vector<ConfigData> dataMap =
@@ -79,7 +86,8 @@ class Config
             {   "networkIsSTA",     &networkIsSTA,      1,                  true },
             {   "networkPsk",       &networkPsk,        MAX_PASSPHRASE_LEN, true },
             {   "networkSsid",      &networkSsid,       MAX_SSID_LEN,       true },
-            {   "switchPolarity",   &switchPolarity,    1,                  false }
+            {   "switchPolarity",   &switchPolarity,    1,                  false },
+            {   "sleepMode",        &sleepMode,         1,                  false }
         };
 
         int configDataGetIndexOfTag(const char* tag);

@@ -9,42 +9,78 @@
 #include "Config.hpp"
 #include <cstring>
 #include "esp_log.h"
+#include "esp_sleep.h"
 #include "SwitchIO.hpp"
 
 static Config& config = Config::GetInstance();
 
 SwitchIO::SwitchIO()
 {
+    configGpio.pin_bit_mask = 0;
+    configGpio.mode = GPIO_MODE_INPUT;
+    configGpio.pull_up_en = GPIO_PULLUP_DISABLE;
+    configGpio.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    configGpio.intr_type = GPIO_INTR_DISABLE;
     isrHandle = nullptr;
-    NumSwitches = 0;
-    memset(switches, GPIO_NUM_NC, switchesMaxLen * sizeof(gpio_num_t));
 
     /* TODO: Get Config involved. For now, use these test pins. */
-    NumSwitches = 2;
-    switches[0] = GPIO_NUM_18;
-    switches[1] = GPIO_NUM_19;
+    switches.push_back(GPIO_NUM_2);
+    switches.push_back(GPIO_NUM_4);
 }
 
 esp_err_t SwitchIO::Configure()
 {
-    gpio_config_t config =
-    {
-        .pin_bit_mask = 0,
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_ENABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
     esp_err_t err = ESP_OK;
+    bool isNc = (config.GetConfigData("switchPolarity") == Config::SwPol_NormallyClosed);
 
-    for(int i = 0; i < NumSwitches; i++)
-        config.pin_bit_mask |= (0x01 << switches[i]);
+    for(gpio_num_t sw : switches)
+        configGpio.pin_bit_mask |= (0x01 << sw);
 
-    err = gpio_config(&config);
+    err = gpio_config(&configGpio);
     if(err != ESP_OK)
+    {
         ESP_LOGE(__func__, "Could not configure GPIO for switches (%d)!", err);
+        return err;
+    }
+
+    /* Set up the switches as sleep wakeup sources. */
+    for(gpio_num_t sw : switches)
+        gpio_wakeup_enable(sw, isNc ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+    esp_sleep_enable_gpio_wakeup();
+
+    /* Set up everything else as a pulled-down input. */
+    for(gpio_num_t io : validPins)
+    {
+        if(!isConfigured(io) && !isNonPullDown(io))
+        {
+            gpio_set_direction(io, GPIO_MODE_INPUT);
+            gpio_pulldown_en(io);
+        }
+    }
 
     return err;
+}
+
+bool SwitchIO::isConfigured(gpio_num_t pin)
+{
+    for(gpio_num_t sw : switches)
+    {
+        if(pin == sw)
+            return true;
+    }
+
+    return false;
+}
+
+bool SwitchIO::isNonPullDown(gpio_num_t pin)
+{
+    for(gpio_num_t npdp : nonPullDownPins)
+    {
+        if(pin == npdp)
+            return true;
+    }
+
+    return false;
 }
 
 bool SwitchIO::Update()
@@ -55,15 +91,15 @@ bool SwitchIO::Update()
     int lightingMode = config.GetConfigData("lightingMode");
     bool state = false;
 
-    if(lightingMode == Config::LEDMode_Off)
+    if(lightingMode == Config::LightingMode_Off)
         return false;
-    else if(lightingMode == Config::LEDMode_On)
+    else if(lightingMode == Config::LightingMode_On)
         return true;
 
     /* We're here because the config depends on switch states, so read them and perform logic. */
-    for(int i = 0; i < NumSwitches; i++)
+    for(gpio_num_t sw : switches)
     {
-        state = (gpio_get_level(switches[i]) == 1);
+        state = (gpio_get_level(sw) == 1);
         state ^= isNc;
 
         allOn &= state;
@@ -71,7 +107,7 @@ bool SwitchIO::Update()
     }
 
     /* Return what the effective state of the lights should be. */
-    if(lightingMode == Config::LEDMode_OnAny)
+    if(lightingMode == Config::LightingMode_OnAny)
         return anyOn;
     else return allOn;
 }

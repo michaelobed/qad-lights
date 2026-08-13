@@ -14,6 +14,7 @@
 
     <body onload="onLoad()" onunload="onUnload()">
         <h1>Quick-and-Dirty Lights</h1>
+        <p id="status"></p>
         <h2>Colours</h2>
         <p>
             <p>
@@ -51,6 +52,15 @@
                     <option value="1">Normally closed</option>
                 </select>
             </p>
+
+            <!-- Not doing this for now - see issue #3. -->
+            <!-- <p>
+                <label for="sleepmode">Sleep mode</label>
+                <select id="sleepmode" onchange="onSleepMode(this, true);">
+                    <option value="0">Never</option>
+                    <option value="1">When lights are off</option>
+                </select>
+            </p> -->
         </p>
 
         <h2>Network</h2>
@@ -64,7 +74,7 @@
                 <option value="0">Access point</option>
                 <option value="1">Connect to network</option>
             </select>
-            <p id="wifisearchhider">
+            <p id="wifisearchdisabler">
                 <input type="button" class="buttonNavigation" id="wifisearch" value="Search for networks" onclick="onWifiSearch(this);" />
             </p>
         </p>
@@ -74,8 +84,13 @@
         <script>
             const ws = new WebSocket("ws://[[CONFIG_NETWORKHOSTNAME]].local/ws");
 
+            ws.addEventListener("close", (event) => {
+                updateStatus("Disconnected", "red");
+            });
+            
             ws.addEventListener("error", (event) => {
                 console.error("Websocket gave error:", event);
+                updateStatus("Websocket error", "red");
             });
 
             ws.addEventListener("message", (event) => {
@@ -105,13 +120,16 @@
 
             function onLoad() {
                 /* We have to set the values of the dropdowns here because doing it in HTML is nasty. */
-                document.getElementById("lightingmode").value = "[[CONFIG_LIGHTINGMODE]]";
-                document.getElementById("wifimode").value = "[[CONFIG_NETWORKISSTA]]";
+                var lightingMode = document.getElementById("lightingmode");
+                var wifiMode = document.getElementById("wifimode");
+
+                lightingMode.value = "[[CONFIG_LIGHTINGMODE]]";
+                wifiMode.value = "[[CONFIG_NETWORKISSTA]]";
+                document.getElementById("sleepmode").value = "[[CONFIG_SLEEPMODE]]";
                 document.getElementById("switchpolarity").value = "[[CONFIG_SWITCHPOLARITY]]";
 
-                onLightingMode(document.getElementById("lightingmode"), false);
-                onWifiMode(document.getElementById("wifimode"));
-
+                onLightingMode(lightingMode, false);
+                onWifiMode(wifiMode);
             }
 
             function onRgbSlider(slider, text) {
@@ -129,6 +147,13 @@
                 ws.send("save");
             }
 
+            /* function onSleepMode(dropdown, fromUI) {
+                var sleepModeVal = dropdown.value;
+                if(fromUI) {
+                    ws.send(`sleepMode: ${sleepModeVal}`);
+                }
+            } */
+
             function onSwitchPolarity(dropdown, fromUI) {
                 var swPolVal = dropdown.value;
                 if(fromUI) {
@@ -141,11 +166,11 @@
             }
 
             function onWifiMode(dropdown, fromUI) {
-                var wifiSearchHider = document.getElementById("wifisearchhider");
+                var wifiSearchDisabler = document.getElementById("wifisearchdisabler");
                 var isSTAVal = dropdown.selectedIndex;
-                var shouldHide = (isSTAVal == 0);
+                var shouldDisable = (isSTAVal == 0);
 
-                wifiSearchHider.hidden = shouldHide;
+                wifiSearchDisabler.disabled = shouldDisable;
                 if(fromUI) {
                     ws.send(`networkIsSTA: ${isSTAVal}`);
                 }
@@ -163,8 +188,10 @@
                 }, searchTime);
             }
 
-            function onWsMessage(message) {
-
+            function updateStatus(statusText, colour = "black") {
+                var status = document.getElementById("status");
+                status.innerHTML = "<i>" + statusText + "</i>";
+                status.style.color = colour;
             }
         </script>
     </body>

@@ -30,6 +30,8 @@ void Network::DeInit()
         esp_wifi_disconnect();
         esp_rom_delay_us(deInitDelayUs);
     }
+    esp_netif_destroy_default_wifi(netIfInstance);
+    netIfInstance = nullptr;
     esp_wifi_stop();
     ESP_LOGI(__func__, "Network de-initialised.");
 }
@@ -105,6 +107,11 @@ esp_err_t Network::InitSTA()
         err = postInit();
     
     return ESP_OK;
+}
+
+bool Network::IsRunning()
+{
+    return (netIfInstance != nullptr);
 }
 
 esp_err_t Network::postInit()

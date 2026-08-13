@@ -26,6 +26,7 @@ class Lighting
         esp_err_t Init();
         void SetColour(uint32_t colour, bool fade = true);      /* Stored as 0xXXRRGGBB. */
         void SetState(bool isOn);
+        void WaitForLEDsOff();
 
     private:
         uint8_t colour[3];                                      /* 0 = r, 1 = g, 2 = b. */
