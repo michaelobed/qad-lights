@@ -11,6 +11,7 @@
 #include "Http.hpp"
 #include "Lighting.hpp"
 #include "../../main/main.hpp"
+#include "SwitchIO.hpp"
 
 extern const char htmlHome[] asm("_binary_home_html_start");
 extern const char htmlRestart[] asm("_binary_restart_html_start");
@@ -20,6 +21,7 @@ extern const char htmlWifiSearch[] asm("_binary_wifisearch_html_start");
 static Config& config = Config::GetInstance();
 static Lighting& lighting = Lighting::GetInstance();
 static Network& network = Network::GetInstance();
+static SwitchIO& switchIo = SwitchIO::GetInstance();
 
 static esp_err_t onUriGet(httpd_req_t* request);
 static esp_err_t onUriPost(httpd_req_t* request);
@@ -95,6 +97,7 @@ bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
         return true;
     }
 
+    /* And restarts. */
     else if(strstr(data, tagLoadedRestart) != nullptr)
     {
         ESP_LOGW(__func__, "Restart triggered via Websocket, beginning restart.");
@@ -120,6 +123,10 @@ bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
             /* If it was a lighting change, handle that. */
             if(strstr(data, "lightingColour") != nullptr)
                 lighting.SetColour(atoi(dataStart), false);
+
+            /* Handle switch polarity changes. */
+            else if(strstr(data, "switchPolarity") != nullptr)
+                switchIo.ConfigurePolarity(atoi(dataStart) == Config::SwPol_NormallyClosed);
         }
         return true;
     }

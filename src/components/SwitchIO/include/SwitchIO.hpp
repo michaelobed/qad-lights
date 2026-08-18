@@ -24,6 +24,7 @@ class SwitchIO
         }
 
         esp_err_t Configure();
+        void ConfigurePolarity(bool isNc);
         bool Update();
 
     private:
