@@ -52,15 +52,16 @@
                     <option value="1">Normally closed</option>
                 </select>
             </p>
-
-            <!-- Not doing this for now - see issue #3. -->
-            <!-- <p>
+            <p>
                 <label for="sleepmode">Sleep mode</label>
                 <select id="sleepmode" onchange="onSleepMode(this, true);">
                     <option value="0">Never</option>
                     <option value="1">When lights are off</option>
+                    <option value="2">When lights have been off for 10 seconds</option>
+                    <option value="3">When lights have been off for 30 seconds</option>
+                    <option value="4">When lights have been off for 1 minute</option>
                 </select>
-            </p> -->
+            </p>
         </p>
 
         <h2>Network</h2>
@@ -147,12 +148,12 @@
                 ws.send("save");
             }
 
-            /* function onSleepMode(dropdown, fromUI) {
+            function onSleepMode(dropdown, fromUI) {
                 var sleepModeVal = dropdown.value;
                 if(fromUI) {
                     ws.send(`sleepMode: ${sleepModeVal}`);
                 }
-            } */
+            }
 
             function onSwitchPolarity(dropdown, fromUI) {
                 var swPolVal = dropdown.value;

@@ -31,7 +31,6 @@ SwitchIO::SwitchIO()
 esp_err_t SwitchIO::Configure()
 {
     esp_err_t err = ESP_OK;
-    bool isNc = (config.GetConfigData("switchPolarity") == Config::SwPol_NormallyClosed);
 
     for(gpio_num_t sw : switches)
         configGpio.pin_bit_mask |= (0x01 << sw);
@@ -44,8 +43,7 @@ esp_err_t SwitchIO::Configure()
     }
 
     /* Set up the switches as sleep wakeup sources. */
-    for(gpio_num_t sw : switches)
-        gpio_wakeup_enable(sw, isNc ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+    ConfigurePolarity(config.GetConfigData("switchPolarity") == Config::SwPol_NormallyClosed);
     esp_sleep_enable_gpio_wakeup();
 
     /* Set up everything else as a pulled-down input. */
@@ -59,6 +57,15 @@ esp_err_t SwitchIO::Configure()
     }
 
     return err;
+}
+
+void SwitchIO::ConfigurePolarity(bool isNc)
+{
+    for(gpio_num_t sw : switches)
+    {
+        gpio_wakeup_disable(sw);
+        gpio_wakeup_enable(sw, isNc ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL);
+    }
 }
 
 bool SwitchIO::isConfigured(gpio_num_t pin)

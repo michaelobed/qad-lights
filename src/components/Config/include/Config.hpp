@@ -42,7 +42,10 @@ class Config
         enum SleepMode : uint8_t
         {
             SleepMode_Never = 0,
-            SleepMode_WhenLEDOff
+            SleepMode_WhenLEDOff,           /* Immediately after turning the LEDs off. */
+            SleepMode_WhenLEDOff10,         /* After 10 seconds. */
+            SleepMode_WhenLEDOff30,         /* After 30 seconds. */
+            SleepMode_WhenLEDOff60,         /* After 1 minute. */
         };
 
         Config();

@@ -8,11 +8,11 @@
 
 #include "Config.hpp"
 #include "esp_log.h"
-#include "esp_sleep.h"
 #include "freertos/FreeRTOS.h"
 #include "Http.hpp"
 #include "Lighting.hpp"
 #include "Network.hpp"
+#include "Sleep.hpp"
 #include "SwitchIO.hpp"
 #include "freertos/task.h"
 
@@ -22,11 +22,12 @@ static Lighting& lighting = Lighting::GetInstance();
 static volatile bool lightingState = false;
 static volatile bool lightingStateLast = false;
 static Network& network = Network::GetInstance();
+static Sleep& sleep = Sleep::GetInstance();
 static SwitchIO& switchIo = SwitchIO::GetInstance();
 static TaskHandle_t switchIOTaskHandle = nullptr;
 
 static void errorHandler();
-static void switchIOTask(void* arg);
+static void periodicTask(void* arg);
 
 extern "C" void app_main()
 {
@@ -66,7 +67,7 @@ extern "C" void app_main()
         ESP_LOGE(__func__, "Could not configure switches (%d)!", err);
         errorHandler();
     }
-    xTaskCreate(switchIOTask, "SwitchIO", 2048, nullptr, tskIDLE_PRIORITY, &switchIOTaskHandle);
+    xTaskCreate(periodicTask, "SwitchIO", 2048, nullptr, tskIDLE_PRIORITY, &switchIOTaskHandle);
 
     /* Initialise the lighting driver. */
     err = lighting.Init();
@@ -109,6 +110,9 @@ extern "C" void app_main()
     }
     else ESP_LOGI(__func__, "HTTP server started.");
 
+    /* Start a default sleep timer. This won't take effect if we're configured to never sleep. */
+    sleep.TimerStartDefault();
+
     ESP_LOGI(__func__, "Init done! Running main loop...");
 
     while(true)
@@ -138,34 +142,30 @@ void Restart()
     esp_restart();
 }
 
-void Sleep()
+void periodicTask(void* arg)
 {
-    /* Currently unused - see issue #3. */
+    bool lightingStateChanged = false;
 
-    ESP_LOGW(__func__, "Sleeping now... -.-");
-    if(network.IsRunning())
-        network.DeInit();
-    lighting.WaitForLEDsOff();
-    esp_light_sleep_start();
-    ESP_LOGW(__func__, "I'm awake! ^_^");
-}
-
-void switchIOTask(void* arg)
-{
     /* Fire every 100ms. */
     while(true)
     {
+        /* Handle changes in lighting state based on switch state. */
         lightingState = switchIo.Update();
-        if(lightingState != lightingStateLast)
+        lightingStateChanged = (lightingState != lightingStateLast);
+        if(lightingStateChanged)
         {
             ESP_LOGI(__func__, "Lighting change detected!");
             lighting.SetState(lightingState);
             lightingStateLast = lightingState;
+
+            /* Start/stop the sleep timer according to the lighting state. */
+            if(lightingState)
+                sleep.TimerStop();
+            else sleep.TimerStart();
         }
 
-        /* We don't do this currently - see issue #3. */
-        // if((config.GetConfigData("sleepMode") == Config::SleepMode_WhenLEDOff) && !lightingState)
-        //     Sleep();
+        /* Finally, check if we should be sleeping (and sleep if true). */
+        sleep.Update();
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
