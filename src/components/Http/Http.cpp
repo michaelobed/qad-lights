@@ -11,6 +11,7 @@
 #include "Http.hpp"
 #include "Lighting.hpp"
 #include "../../main/main.hpp"
+#include "Sleep.hpp"
 #include "SwitchIO.hpp"
 
 extern const char htmlHome[] asm("_binary_home_html_start");
@@ -21,6 +22,7 @@ extern const char htmlWifiSearch[] asm("_binary_wifisearch_html_start");
 static Config& config = Config::GetInstance();
 static Lighting& lighting = Lighting::GetInstance();
 static Network& network = Network::GetInstance();
+static Sleep& sleep = Sleep::GetInstance();
 static SwitchIO& switchIo = SwitchIO::GetInstance();
 
 static esp_err_t onUriGet(httpd_req_t* request);
@@ -127,6 +129,15 @@ bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
             /* Handle switch polarity changes. */
             else if(strstr(data, "switchPolarity") != nullptr)
                 switchIo.ConfigurePolarity(atoi(dataStart) == Config::SwPol_NormallyClosed);
+
+            /* Handle sleep mode changes. */
+            else if(strstr(data, "sleepMode") != nullptr)
+            {
+                /* Stop the previous timer before starting one, but only if it wasn't the on-startup holdoff timer. */
+                if(!sleep.TimerStartDefaultIsActive())
+                    sleep.TimerStop();
+                sleep.TimerStart();
+            }
         }
         return true;
     }
