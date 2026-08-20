@@ -47,6 +47,17 @@ class Http
         char wsUriBuf[wsUriBufSize];
 
         /* URIs. */
+        httpd_uri_t uriFwUpdate =
+        {
+            .uri = "/fwupdate",
+            .method = HTTP_GET,
+            .handler = nullptr,
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
+        };
+
         httpd_uri_t uriHome =
         {
             .uri = "/",

@@ -6,14 +6,14 @@
         <title>Quick-and-Dirty Lights</title>
 
         <!-- Uncomment this for ESP32-side web pages... -->
-        <!-- <style>[[STYLES]]</style> -->
+        <style>[[STYLES]]</style>
 
         <!-- ... or uncomment this for debugging. Never, ever both! -->
-        <link rel="stylesheet" href="styles.css">
+        <!-- <link rel="stylesheet" href="styles.css"> -->
     </head>
 
     <body>
-        <form id="fwform" name="fwform" action="/fwsubmit" method="post" />
+        <form id="fwform" name="fwform" action="/fwsubmit" method="post" enctype="multipart/form-data" />
         <h1>Firmware update</h1>
         <p>Choose a firmware image file below, then click OK.</p>
         <p>

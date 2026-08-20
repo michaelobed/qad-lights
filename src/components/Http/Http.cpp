@@ -14,6 +14,7 @@
 #include "Sleep.hpp"
 #include "SwitchIO.hpp"
 
+extern const char htmlFwUpdate[] asm("_binary_fwupdate_html_start");
 extern const char htmlHome[] asm("_binary_home_html_start");
 extern const char htmlRestart[] asm("_binary_restart_html_start");
 extern const char htmlStyles[] asm("_binary_styles_css_start");
@@ -35,6 +36,7 @@ Http::Http()
     handle = nullptr;
     State = State_Normal;
 
+    uriFwUpdate.handler = onUriGet;
     uriHome.handler = onUriGet;
     uriRestart.handler = onUriGet;
     uriWifiSearch.handler = onUriGet;
@@ -154,6 +156,7 @@ esp_err_t Http::Init()
 
     /* Start httpd and register URIs. */
     return (    httpd_start(&handle, &httpConfig) |
+                httpd_register_uri_handler(handle, &uriFwUpdate) |
                 httpd_register_uri_handler(handle, &uriHome) |
                 httpd_register_uri_handler(handle, &uriRestart) |
                 httpd_register_uri_handler(handle, &uriWifiSearch) |
@@ -273,6 +276,8 @@ esp_err_t onUriGet(httpd_req_t* request)
         pageToSend = (char*)htmlWifiSearch;
     else if(strstr(request->uri, "restart") != nullptr)
         pageToSend = (char*)htmlRestart;
+    else if(strstr(request->uri, "fwupdate") != nullptr)
+        pageToSend = (char*)htmlFwUpdate;
 
     return http.SendPage(request, pageToSend);
 }

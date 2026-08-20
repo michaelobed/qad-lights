@@ -80,7 +80,11 @@
             </p>
         </p>
 
-        <p><br><input type="button" class="buttonNavigation" id="save" value="Save settings to flash" onclick="onSaveSettings();"></p>
+        <p>
+            <br>
+            <input type="button" class="buttonNavigation" id="fwupdate" value="Update firmware" onclick="location.href='/fwupdate';">
+            <input type="button" class="buttonNavigation" id="save" value="Save settings to flash" onclick="onSaveSettings();">
+        </p>
 
         <script>
             const ws = new WebSocket("ws://[[CONFIG_NETWORKHOSTNAME]].local/ws");
