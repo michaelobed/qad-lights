@@ -45,6 +45,10 @@ td {
     padding: 20px;
 }
 
+.fileSelect {
+    font-family: trebuchet ms;
+}
+
 .rgbSlider, select {
     margin-left: 20px;
     width: 200px;

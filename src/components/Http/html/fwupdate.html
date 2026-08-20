@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Quick-and-Dirty Lights</title>
+
+        <!-- Uncomment this for ESP32-side web pages... -->
+        <!-- <style>[[STYLES]]</style> -->
+
+        <!-- ... or uncomment this for debugging. Never, ever both! -->
+        <link rel="stylesheet" href="styles.css">
+    </head>
+
+    <body>
+        <form id="fwform" name="fwform" action="/fwsubmit" method="post" />
+        <h1>Firmware update</h1>
+        <p>Choose a firmware image file below, then click OK.</p>
+        <p>
+            <input type="file" class="fileSelect" id="fwfile" oninput="onFileSelect(this)" />
+        </p>
+        <p>
+            <input type="button" class="buttonNavigation" value="Back" onclick="goHome();" />
+            <input type="submit" class="buttonNavigation" id="buttonOK" value="OK" disabled="true" form="fwform" />
+        </p>
+
+        <script>
+            function goHome() {
+                location.href = "/";
+            }
+
+            function onFileSelect(file) {
+                document.getElementById("buttonOK").disabled = (file.value == "");
+            }
+        </script>
+    </body>
+</html>
