@@ -13,24 +13,120 @@
     </head>
 
     <body>
-        <form id="fwform" name="fwform" action="/fwsubmit" method="post" enctype="multipart/form-data" />
         <h1>Firmware update</h1>
         <p>Choose a firmware image file below, then click OK.</p>
         <p>
-            <input type="file" class="fileSelect" id="fwfile" oninput="onFileSelect(this)" />
+            <input type="file" class="fileSelect" id="fwfile" name="fwfile" accept=".bin" oninput="onFileSelect(this)" /> 
         </p>
+        <div id="uploader" hidden="true">
+            <h3 id="fwstatustext">Uploading...</h3>
+            <progress id="fwfileprogress" class="uploaderBar" value="0" min="0" max="0" />
+        </div>
         <p>
             <input type="button" class="buttonNavigation" value="Back" onclick="goHome();" />
-            <input type="submit" class="buttonNavigation" id="buttonOK" value="OK" disabled="true" form="fwform" />
+            <input type="submit" class="buttonNavigation" id="buttonOK" value="OK" disabled="true" onclick="uploadStart();" />
         </p>
 
         <script>
+            const buttonOK = document.getElementById("buttonOK");
+            var fileContent;
+            const fwFile = document.getElementById("fwfile");
+            var fwFileSize = 0;
+            var reader;
+            const maxChunkSize = 32768;
+            const progress = document.getElementById("fwfileprogress");
+            var remaining = 0;
+            var state = "upload";
+            const statusText = document.getElementById("fwstatustext");
+            const uploader = document.getElementById("uploader");
+            
+            const ws = new WebSocket("ws://[[CONFIG_NETWORKHOSTNAME]].local/ws");
+
+            ws.addEventListener("error", (event) => {
+                console.error("Websocket gave error:", event);
+                statusText.innerText = "Connection error!";
+            });
+
+            ws.addEventListener("message", (event) => {
+                switch(event.data) {
+                    case "fwsizeack":
+                        if(state === "waitForSizeAck") {
+                            state = "sendChunk";
+
+                            reader = new FileReader();
+                            reader.onloadend = (event) => {
+                                fileContent = event.target.result;
+                                uploadManageState();
+                            };
+                            reader.readAsArrayBuffer(fwFile.files[0]);
+                        }
+                        break;
+
+                    case "fwchack":
+                        if(remaining > 0) {
+                            uploadManageState();
+                        }
+                        else {
+                            statusText.innerText = "Done!";
+                            buttonOK.disabled = true;
+                        }
+                        break;
+
+                    case "fwnoneed":
+                        statusText.innerText = "Firmware matches, not updating.";
+                        buttonOK.disabled = true;
+                        break;
+                        
+                    case "fwnack":
+                        statusText.innerText = "Failed!";
+                        buttonOK.disabled = true;
+                        break;
+                }
+            });
+
             function goHome() {
                 location.href = "/";
             }
 
             function onFileSelect(file) {
-                document.getElementById("buttonOK").disabled = (file.value == "");
+                buttonOK.disabled = (file.value == "");
+            }
+
+            function uploadManageState() {
+                switch(state) {
+                    case "upload":
+                        fwFileSize = fwFile.files[0].size;
+                        fwFile.hidden = true;
+                        uploader.hidden = false;
+                        progress.max = fwFileSize;
+                        progress.value = 0;
+                        remaining = fwFileSize;
+                        ws.send("fwsize: " + fwFileSize);
+                        state = "waitForSizeAck";
+                        break;
+
+                    case "sendChunk":
+                        var tag = new TextEncoder().encode("fwchunk: ");
+                        var startIndex = fwFileSize - remaining;
+                        var toSendSize = Math.min(maxChunkSize, remaining);
+                        var bytes = new Uint8Array(fileContent, startIndex, toSendSize); 
+                        var toSend = new Uint8Array(tag.length + toSendSize);
+                        toSend.set(tag);
+                        toSend.set(bytes, tag.length);
+
+                        ws.send(toSend);
+                        remaining -= toSendSize;
+                        progress.value += toSendSize;
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            function uploadStart() {
+                state = "upload";
+                uploadManageState();
             }
         </script>
     </body>

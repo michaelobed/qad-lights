@@ -19,7 +19,9 @@ class Http
         {
             State_Normal,
             State_WifiSearch,
-            State_WifiChoice
+            State_WifiChoice,
+            State_FwGotSize,
+            State_FwGotFirstChunk
         };
 
         Http();
@@ -30,16 +32,19 @@ class Http
             return h;
         }
 
-        static constexpr int BufferSize = 10240;
+        static constexpr size_t BufferSize = 40000;
         char Buffer[BufferSize];
         std::vector<Network::WifiInfo> NetworkList;
         StateType State;
 
+        esp_err_t HandleFwUpdate(httpd_req_t* request, uint8_t* data, size_t length);
+        esp_err_t HandleWifiSubmit(httpd_req_t* request);
         bool HandleWs(httpd_req_t* request, char* data, size_t length);
         esp_err_t Init();
         esp_err_t SendPage(httpd_req_t* request, char* page);
 
     private:
+        size_t fwBytesRemaining;
         httpd_handle_t handle;
         static constexpr int restartWaitMs = 3000;
         static constexpr int restartWaitMsNetwork = 30000;
