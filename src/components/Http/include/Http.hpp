@@ -21,7 +21,7 @@ class Http
             State_WifiSearch,
             State_WifiChoice,
             State_FwGotSize,
-            State_FwGotFirstChunk
+            State_FwIgnoring
         };
 
         Http();
@@ -37,7 +37,7 @@ class Http
         std::vector<Network::WifiInfo> NetworkList;
         StateType State;
 
-        esp_err_t HandleFwUpdate(httpd_req_t* request, uint8_t* data, size_t length);
+        esp_err_t HandleFwUpdate(httpd_req_t* request);
         esp_err_t HandleWifiSubmit(httpd_req_t* request);
         bool HandleWs(httpd_req_t* request, char* data, size_t length);
         esp_err_t Init();
@@ -45,6 +45,7 @@ class Http
 
     private:
         size_t fwBytesRemaining;
+        bool fwIsFirstChunk;
         httpd_handle_t handle;
         static constexpr int restartWaitMs = 3000;
         static constexpr int restartWaitMsNetwork = 30000;
@@ -52,6 +53,17 @@ class Http
         char wsUriBuf[wsUriBufSize];
 
         /* URIs. */
+        httpd_uri_t uriFwSubmit =
+        {
+            .uri = "/fwsubmit",
+            .method = HTTP_POST,
+            .handler = nullptr,
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
+        };
+
         httpd_uri_t uriFwUpdate =
         {
             .uri = "/fwupdate",

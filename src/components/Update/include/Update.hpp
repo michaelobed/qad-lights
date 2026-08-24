@@ -28,7 +28,7 @@ class Update
         esp_err_t Check();
         esp_err_t WriteContinue(const uint8_t* data, size_t size);
         esp_err_t WriteEnd();
-        esp_err_t WriteStart(const uint8_t* data, size_t size, bool& shouldContinue);
+        esp_err_t WriteStart(const uint8_t* data, size_t size, size_t imageSize, bool& shouldContinue);
 
     private:
         const esp_partition_t* configured;

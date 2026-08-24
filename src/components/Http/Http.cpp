@@ -36,9 +36,11 @@ Http::Http()
 {
     memset(Buffer, 0, BufferSize);
     fwBytesRemaining = 0;
+    fwIsFirstChunk = false;
     handle = nullptr;
     State = State_Normal;
 
+    uriFwSubmit.handler = onUriPost;
     uriFwUpdate.handler = onUriGet;
     uriHome.handler = onUriGet;
     uriRestart.handler = onUriGet;
@@ -73,69 +75,65 @@ char* Http::doReplacement(char* html, const char* toLookFor, const char* toRepla
     return Buffer;
 }
 
-esp_err_t Http::HandleFwUpdate(httpd_req_t* request, uint8_t* data, size_t length)
+esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
 {
-    httpd_ws_frame_t ackPacket =
-    {
-        .final = false,
-        .fragmented = false,
-        .type = HTTPD_WS_TYPE_TEXT,
-        .payload = nullptr,
-        .len = 0
-
-    };
-    const char* dataCast = (char*)data;
     uint8_t* dataStart = nullptr;
     esp_err_t err = ESP_OK;
-    constexpr char respAckChunk[] = "fwchack";
-    constexpr char respAckSize[] = "fwsizeack";
-    constexpr char respNack[] = "fwnack";
-    constexpr char respNoNeed[] = "fwnoneed";
-    constexpr char tagFwChunk[] = "fwchunk: ";
-    constexpr char tagFwSize[] = "fwsize: ";
+    size_t length = 0;
+    constexpr char tagChunkSize[] = "\"chunkSize\"\r\n\r\n";
+    constexpr char tagContentType[] = "octet-stream\r\n\r\n";
+    constexpr char tagFwSize[] = "\"fwFileSize\"\r\n\r\n";
     bool shouldContinue = true;
-    char* tag = nullptr;
 
-    /* Find the data we're interested in. */
-    if(strstr(dataCast, tagFwSize) != nullptr)
-        tag = (char*)tagFwSize;
-    else if(strstr(dataCast, tagFwChunk) != nullptr)
-        tag = (char*)tagFwChunk;
-    if(tag == nullptr)
-        return ESP_FAIL;
-    dataStart = (uint8_t*)strstr(dataCast, tag) + strlen(tag);
-    length -= dataStart - data;
+    /* Read data in. */
+    httpd_req_recv(request, Buffer, request->content_len);
 
     switch(State)
     {
-        /* This should be a "fwsize" tag, so parse that. */
+        /* This should be telling us how much data to expect. */
         case State_Normal:
-            fwBytesRemaining = atoi((char*)dataStart);
-            ESP_LOGI(__func__, "Got file size of %u", fwBytesRemaining);
-            ackPacket.payload = (uint8_t*)respAckSize;
-            ackPacket.len = strlen(respAckSize);
-            httpd_ws_send_frame(request, &ackPacket);
-            State = State_FwGotSize;
-            return err;
-
-        /* This should be the first chunk of the firmware data. Analyse it to determine whether to continue. */
-        case State_FwGotSize:
-            err = update.WriteStart(dataStart, length, shouldContinue);
-            if((err == ESP_OK) && !shouldContinue)
+            dataStart = (uint8_t*)strstr(Buffer, tagFwSize);
+            if(dataStart == nullptr)
+                err = ESP_FAIL;
+            else
             {
-                ESP_LOGW(__func__, "Firmware data identical to current, ignoring further data.");
-                ackPacket.payload = (uint8_t*)respNoNeed;
-                ackPacket.len = strlen(respNoNeed);
-                State = State_Normal;
-                httpd_ws_send_frame(request, &ackPacket);
-                return err;
+                dataStart += strlen(tagFwSize);
+    
+                fwBytesRemaining = atoi((char*)dataStart);
+                ESP_LOGI(__func__, "Got file size of %u", fwBytesRemaining);
+                State = State_FwGotSize;
+                fwIsFirstChunk = true;
             }
-            State = State_FwGotFirstChunk;
             break;
 
-        /* Continuing the write. */
-        case State_FwGotFirstChunk:
-            err = update.WriteContinue(dataStart, length);
+        /* This should be the a chunk of the firmware data. We may ignore it if we don't need to update. */
+        case State_FwGotSize:
+        case State_FwIgnoring:
+            dataStart = (uint8_t*)strstr(Buffer, tagChunkSize);
+            if(dataStart == nullptr)
+                err = ESP_FAIL;
+            else
+            {
+                dataStart += strlen(tagChunkSize);
+                length = atoi((char*)dataStart);
+
+                if(State != State_FwIgnoring)
+                {
+                    dataStart = (uint8_t*)strstr((char*)dataStart, tagContentType);
+                    dataStart += strlen(tagContentType);
+                    if(fwIsFirstChunk)
+                    {
+                        err = update.WriteStart(dataStart, length, fwBytesRemaining, shouldContinue);
+                        if((err == ESP_OK) && !shouldContinue)
+                        {
+                            ESP_LOGW(__func__, "Firmware data identical to current, ignoring further data.");
+                            State = State_FwIgnoring;
+                        }
+                        fwIsFirstChunk = false;
+                    }
+                    else err = update.WriteContinue(dataStart, length);
+                }
+            }
             break;
 
         /* Invalid! */
@@ -143,24 +141,28 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request, uint8_t* data, size_t lengt
             return ESP_FAIL;
     }
 
+    ESP_LOGI(__func__, "length: %u, fwBytesRemaining: %u", length, fwBytesRemaining);
+
     if(err == ESP_OK)
     {
-        ackPacket.payload = (uint8_t*)respAckChunk;
-        ackPacket.len = strlen(respAckChunk);
+        httpd_resp_send(request, nullptr, 0);
         fwBytesRemaining -= length;
     }
     else
     {
         /* If we're here, something went wrong. */
-        ackPacket.payload = (uint8_t*)respNack;
-        ackPacket.len = strlen(respNack);
+        ESP_LOGE(__func__, "Received bad chunk with %u bytes remaining (%d)!", fwBytesRemaining, err);
+        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Bad chunk!");
         State = State_Normal;
     }
-    httpd_ws_send_frame(request, &ackPacket);
 
     /* End the write if all bytes have been received. */
     if(fwBytesRemaining == 0)
-        err = update.WriteEnd();
+    {
+        if(State != State_FwIgnoring)
+            err = update.WriteEnd();
+        State = State_Normal;
+    }
 
     return err;
 }
@@ -253,15 +255,8 @@ bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
     constexpr char tagSave[] = "save";
     constexpr char tagWifiSearch[] = "wifiSearch";
 
-    /* Deal with OTA update things first. */
-    if(strstr(data, "fw") != nullptr)
-    {
-        HandleFwUpdate(request, (uint8_t*)data, length);
-        return true;
-    }
-
-    /* Then saving since that isn't dependent on config tags. */
-    else if(strstr(data, tagSave) != nullptr)
+    /* Deal with saving since that isn't dependent on config tags. */
+    if(strstr(data, tagSave) != nullptr)
     {
         shouldRestart = config.Save();
 
@@ -341,6 +336,7 @@ esp_err_t Http::Init()
 
     /* Start httpd and register URIs. */
     return (    httpd_start(&handle, &httpConfig) |
+                httpd_register_uri_handler(handle, &uriFwSubmit) |
                 httpd_register_uri_handler(handle, &uriFwUpdate) |
                 httpd_register_uri_handler(handle, &uriHome) |
                 httpd_register_uri_handler(handle, &uriRestart) |
@@ -474,6 +470,8 @@ esp_err_t onUriPost(httpd_req_t* request)
     /* Structure allows for potentially future POST sub-handlers. */
     if((http.State == Http::State_WifiChoice) && strstr(request->uri, "wifisubmit") != nullptr)
         return http.HandleWifiSubmit(request);
+    else if(strstr(request->uri, "fwsubmit") != nullptr)
+        return http.HandleFwUpdate(request);
     else return ESP_FAIL;
 }
 
@@ -485,7 +483,7 @@ esp_err_t onWs(httpd_req_t* request)
     httpd_ws_frame_t wsFrame;
 
     memset(&wsFrame, 0, sizeof(httpd_ws_frame_t));
-    wsFrame.type = ((http.State == Http::State_FwGotSize) || (http.State == Http::State_FwGotFirstChunk)) ? HTTPD_WS_TYPE_BINARY : HTTPD_WS_TYPE_TEXT;
+    wsFrame.type = HTTPD_WS_TYPE_TEXT;
 
     /* Get frame length. Returned value is exclusive of null terminator. */
     err = httpd_ws_recv_frame(request, &wsFrame, 0);

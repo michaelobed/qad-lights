@@ -55,7 +55,7 @@ esp_err_t Update::WriteEnd()
     return err;
 }
 
-esp_err_t Update::WriteStart(const uint8_t* data, size_t size, bool& shouldContinue)
+esp_err_t Update::WriteStart(const uint8_t* data, size_t size, size_t imageSize, bool& shouldContinue)
 {
     esp_app_desc_t appInfoCurrent;
     esp_app_desc_t appInfoNew;
@@ -69,7 +69,7 @@ esp_err_t Update::WriteStart(const uint8_t* data, size_t size, bool& shouldConti
     {
         /* Obtain an OTA handle and begin the write. */
         ESP_LOGI(__func__, "Writing to OTA partition starting at address 0x%08x...", update->address);
-        err = esp_ota_begin(update, size, &handle);
+        err = esp_ota_begin(update, imageSize, &handle);
         if(err != ESP_OK)
             return err;
 
