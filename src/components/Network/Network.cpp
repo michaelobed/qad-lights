@@ -15,13 +15,19 @@
 
 static Config& config = Config::GetInstance();
 
+static void onEvent(void* arg, esp_event_base_t base, int32_t id, void* data);
+
 Network::Network()
 {
     netIfInstance = nullptr;
+    RestartRequested = false;
+    RetryCount = RetryCountMax;
+    wifiEventHandler = nullptr;
 }
 
 void Network::DeInit()
 {
+    RestartRequested = true;
     mdns_free();
     if(config.GetConfigData("networkIsSTA"))
     {
@@ -155,6 +161,20 @@ esp_err_t Network::postInit()
 
 esp_err_t Network::preInit()
 {
+    esp_err_t err = ESP_OK;
+
+    /* Register WiFi event handler so we can look out for disconnections. */
+    err = esp_event_handler_instance_register(  WIFI_EVENT,
+                                                WIFI_EVENT_STA_DISCONNECTED,
+                                                onEvent,
+                                                nullptr,
+                                                &wifiEventHandler);
+    if(err != ESP_OK)
+    {
+        ESP_LOGE(__func__, "Could not register WiFi event handler (%d)!", err);
+        return err;
+    }
+
     return esp_netif_init();
 }
 
@@ -191,4 +211,25 @@ esp_err_t Network::StartSTASearch(std::vector<WifiInfo>& list)
     if(records != nullptr)
         delete[] records;
     return err;
+}
+
+void onEvent(void* arg, esp_event_base_t base, int32_t id, void* data)
+{
+    esp_err_t err = ESP_OK;
+    Network& n = Network::GetInstance();
+
+    /* This event handler is only for the WIFI_EVENT_STA_DISCONNECT EVENT, which can happen either because we
+     * failed to connect to a network or as part of an intentional restart. */
+    if(!n.RestartRequested)
+    {
+        if(--n.RetryCount == 0)
+            ESP_LOGE(__func__, "All attempts to connect to WiFi STA failed! Giving up...");
+        else
+        {
+            ESP_LOGW(__func__, "Attempt %d of %d to connect to WiFi STA failed. Re-attempting...", Network::RetryCountMax - n.RetryCount, Network::RetryCountMax);
+            err = esp_wifi_connect();
+            if(err != ESP_OK)
+                ESP_LOGE(__func__, "Could not re-attempt connection to WiFi STA (%d)! Giving up...", err);
+        }
+    }
 }

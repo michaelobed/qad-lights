@@ -19,7 +19,9 @@ class Http
         {
             State_Normal,
             State_WifiSearch,
-            State_WifiChoice
+            State_WifiChoice,
+            State_FwGotSize,
+            State_FwIgnoring
         };
 
         Http();
@@ -30,16 +32,22 @@ class Http
             return h;
         }
 
-        static constexpr int BufferSize = 10240;
+        static constexpr size_t BufferSize = 20000;
         char Buffer[BufferSize];
         std::vector<Network::WifiInfo> NetworkList;
         StateType State;
 
+        esp_err_t HandleFwUpdate(httpd_req_t* request);
+        esp_err_t HandleWifiSubmit(httpd_req_t* request);
         bool HandleWs(httpd_req_t* request, char* data, size_t length);
         esp_err_t Init();
         esp_err_t SendPage(httpd_req_t* request, char* page);
 
     private:
+        size_t fwBytesRemaining;
+        uint8_t fwChunkBuffer[BufferSize];
+        bool fwCanRestart;
+        bool fwIsFirstChunk;
         httpd_handle_t handle;
         static constexpr int restartWaitMs = 3000;
         static constexpr int restartWaitMsNetwork = 30000;
@@ -47,6 +55,28 @@ class Http
         char wsUriBuf[wsUriBufSize];
 
         /* URIs. */
+        httpd_uri_t uriFwSubmit =
+        {
+            .uri = "/fwsubmit",
+            .method = HTTP_POST,
+            .handler = nullptr,
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
+        };
+
+        httpd_uri_t uriFwUpdate =
+        {
+            .uri = "/fwupdate",
+            .method = HTTP_GET,
+            .handler = nullptr,
+            .user_ctx = nullptr,
+            .is_websocket = false,
+            .handle_ws_control_frames = false,
+            .supported_subprotocol = nullptr
+        };
+
         httpd_uri_t uriHome =
         {
             .uri = "/",

@@ -29,6 +29,10 @@ class Network
             return n;
         }
 
+        bool RestartRequested;
+        int RetryCount;
+        static constexpr int RetryCountMax = 3;
+
         void DeInit();
         esp_err_t InitAP();
         esp_err_t InitSTA();
@@ -40,6 +44,7 @@ class Network
         static constexpr int maxConnections = 3;
         esp_netif_t* netIfInstance;
         wifi_config_t wifiConfig;
+        esp_event_handler_instance_t wifiEventHandler;
 
         esp_err_t postInit();
         esp_err_t preInit();

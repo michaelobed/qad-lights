@@ -15,6 +15,7 @@
 #include "Sleep.hpp"
 #include "SwitchIO.hpp"
 #include "freertos/task.h"
+#include "Update.hpp"
 
 static Config& config = Config::GetInstance();
 static Http& http = Http::GetInstance();
@@ -25,6 +26,7 @@ static Network& network = Network::GetInstance();
 static Sleep& sleep = Sleep::GetInstance();
 static SwitchIO& switchIo = SwitchIO::GetInstance();
 static TaskHandle_t switchIOTaskHandle = nullptr;
+static Update& update = Update::GetInstance();
 
 static void errorHandler();
 static void periodicTask(void* arg);
@@ -33,6 +35,14 @@ extern "C" void app_main()
 {
     esp_err_t err = ESP_OK;
     bool isSTA = false;
+
+    /* Check for and validate any new OTA images. */
+    err = update.Check();
+    if(err != ESP_OK)
+    {
+        ESP_LOGE(__func__, "Could not validate image (%d)!", err);
+        errorHandler();
+    }
 
     /* Initialise a default event loop. */
     err = esp_event_loop_create_default();
@@ -122,7 +132,7 @@ extern "C" void app_main()
     }
 }
 
-void errorHandler()
+__noreturn void errorHandler()
 {
     /* Do nothing forever. */
     while(true);

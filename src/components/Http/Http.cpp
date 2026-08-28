@@ -6,6 +6,7 @@
 //  
 //  Copyright © 2026 Michael Obed.
 
+#include "mbedtls/base64.h"
 #include "Config.hpp"
 #include "esp_log.h"
 #include "Http.hpp"
@@ -13,7 +14,9 @@
 #include "../../main/main.hpp"
 #include "Sleep.hpp"
 #include "SwitchIO.hpp"
+#include "Update.hpp"
 
+extern const char htmlFwUpdate[] asm("_binary_fwupdate_html_start");
 extern const char htmlHome[] asm("_binary_home_html_start");
 extern const char htmlRestart[] asm("_binary_restart_html_start");
 extern const char htmlStyles[] asm("_binary_styles_css_start");
@@ -24,6 +27,7 @@ static Lighting& lighting = Lighting::GetInstance();
 static Network& network = Network::GetInstance();
 static Sleep& sleep = Sleep::GetInstance();
 static SwitchIO& switchIo = SwitchIO::GetInstance();
+static Update& update = Update::GetInstance();
 
 static esp_err_t onUriGet(httpd_req_t* request);
 static esp_err_t onUriPost(httpd_req_t* request);
@@ -32,9 +36,14 @@ static esp_err_t onWs(httpd_req_t* request);
 Http::Http()
 {
     memset(Buffer, 0, BufferSize);
+    fwBytesRemaining = 0;
+    fwCanRestart = false;
+    fwIsFirstChunk = false;
     handle = nullptr;
     State = State_Normal;
 
+    uriFwSubmit.handler = onUriPost;
+    uriFwUpdate.handler = onUriGet;
     uriHome.handler = onUriGet;
     uriRestart.handler = onUriGet;
     uriWifiSearch.handler = onUriGet;
@@ -68,17 +77,217 @@ char* Http::doReplacement(char* html, const char* toLookFor, const char* toRepla
     return Buffer;
 }
 
+esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
+{
+    uint8_t* dataStart = nullptr;
+    int err = ESP_OK;
+    size_t length = 0;
+    size_t lengthBase64 = 0;
+    constexpr char tagChunkData[] = "\"chunkData\"\r\n\r\n";
+    constexpr char tagFwSize[] = "\"fwFileSize\"\r\n\r\n";
+    constexpr char tagFwRestart[] = "\"fwRestart\"\r\n\r\n";
+    bool shouldContinue = true;
+
+    /* Read data in. */
+    httpd_req_recv(request, Buffer, request->content_len);
+
+    switch(State)
+    {
+        /* This should be telling us how much data to expect. */
+        case State_Normal:
+            dataStart = (uint8_t*)strstr(Buffer, tagFwSize);
+            if(dataStart == nullptr)
+            {
+                /* Check for at least the fwRestart tag. */
+                if(fwCanRestart)
+                {
+                    dataStart = (uint8_t*)strstr(Buffer, tagFwRestart);
+                    if(dataStart != nullptr)
+                    {
+                        httpd_resp_send(request, nullptr, 0);
+                        Restart();
+                    }
+                }
+                err = ESP_FAIL;
+            }
+            else
+            {
+                dataStart += strlen(tagFwSize);
+    
+                fwBytesRemaining = atoi((char*)dataStart);
+                ESP_LOGI(__func__, "Got file size of %u", fwBytesRemaining);
+                State = State_FwGotSize;
+                fwIsFirstChunk = true;
+            }
+            break;
+
+        /* This should be the a chunk of the firmware data. We may ignore it if we don't need to update. */
+        case State_FwGotSize:
+        case State_FwIgnoring:
+            dataStart = (uint8_t*)strstr((char*)Buffer, tagChunkData);
+            if(dataStart == nullptr)
+                err = ESP_FAIL;
+            else
+            {
+                dataStart += strlen(tagChunkData);
+                lengthBase64 = strcspn((char*)dataStart, "\r\n");
+                
+                /* Convert the data from Base64. */
+                memset(fwChunkBuffer, 0, BufferSize);
+                err = mbedtls_base64_decode(fwChunkBuffer, BufferSize, &length, dataStart, lengthBase64);
+                
+                if(State != State_FwIgnoring)
+                {
+                    if(err != 0)
+                        ESP_LOGE(__func__, "Base64 decode failed with %u bytes remaining (%d)!", fwBytesRemaining, err);
+
+                    else if(fwIsFirstChunk)
+                    {
+                        err = update.WriteStart(fwChunkBuffer, length, fwBytesRemaining, shouldContinue);
+                        if((err == ESP_OK) && !shouldContinue)
+                        {
+                            ESP_LOGW(__func__, "Firmware data identical to current, ignoring further data.");
+                            State = State_FwIgnoring;
+                        }
+                        fwIsFirstChunk = false;
+                    }
+                    else err = update.WriteContinue(fwChunkBuffer, length);
+                }
+            }
+            break;
+
+        /* Invalid! */
+        default:
+            return ESP_FAIL;
+    }
+
+    if(err == ESP_OK)
+    {
+        /* Send HTTP status 422 (arbitrary, I know - others are too specific!) for a matching image. */
+        if(State == State_FwIgnoring)
+        {
+            httpd_resp_send_custom_err(request, "422 Unprocessable Content", "Update matches current image");
+            State = State_Normal;
+        }
+
+        /* If this was the last chunk, don't send a response just yet. */
+        else if(fwBytesRemaining > length)
+            httpd_resp_send(request, nullptr, 0);
+        fwBytesRemaining -= length;
+    }
+    else
+    {
+        /* If we're here, something went wrong. */
+        ESP_LOGE(__func__, "Received bad chunk with %u bytes remaining (%d)!", fwBytesRemaining, err);
+        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Bad chunk!");
+        State = State_Normal;
+    }
+
+    /* End the write if all bytes have been received. */
+    if(fwBytesRemaining == 0)
+    {
+        err = update.WriteEnd();
+        if(err == ESP_OK)
+        {
+            httpd_resp_send(request, nullptr, 0);
+            fwCanRestart = true;
+        }
+        else httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Bad image!");
+        State = State_Normal;
+    }
+
+    return err;
+}
+
+esp_err_t Http::HandleWifiSubmit(httpd_req_t* request)
+{
+    int err = 0;
+    int index = -1;
+    char indexString[4];
+    char* nextToken = nullptr;
+    char* pageToSend = (char*)htmlRestart;
+    char* tag = nullptr;
+    int tagLen = -1;
+
+    /* Again, send back the home page by default unless we really are processing something. */
+    pageToSend = (char*)htmlRestart;
+
+    /* Get the POST data.
+     * For the record, I really hate that we're sending passwords in plaintext via POST, but whatever. It's quick-and-dirty for a reason... */
+    memset(Buffer, 0, BufferSize);
+    err = httpd_req_recv(request, Buffer, request->content_len);
+
+    /* If the socket was closed, abort everything. */
+    if(err == 0)
+        return ESP_FAIL;
+
+    /* Handle timeout. */
+    else if(err == HTTPD_SOCK_ERR_TIMEOUT)
+        httpd_resp_send_408(request);
+
+    /* Handle SSID. */
+    tag = strstr(Buffer, "ssid=");
+
+    /* Find PSK. It may be that we never got one, so handle that case too. */
+    nextToken = strchr(tag, '&');
+    if(nextToken == nullptr)
+        tagLen = strlen(tag);
+    else tagLen = nextToken - tag;
+
+    /* Find the index of the selected network, then apply SSID. */
+    strncpy(indexString, tag + 5, tagLen);
+    index = atoi(indexString);
+    config.SetConfigData("networkSsid", NetworkList[index].ssid);
+
+    /* Apply PSK if there is one. */
+    if(NetworkList[index].needsPsk)
+    {
+        tag = strstr(Buffer, "psk=");
+        tag += 4;
+
+        /* The PSK arrives percent-encoded, so we have some character replacement to do. */
+        nextToken = tag;
+        while(nextToken != nullptr)
+        {
+            /* Turn '+' into spaces. */
+            nextToken = strchr(nextToken, '+');
+            if(nextToken == nullptr)
+                break;
+            *nextToken = ' ';
+        }
+
+        /* Turn '%' into whatever the hex number after it is. */
+        nextToken = tag;
+        while(nextToken != nullptr)
+        {
+            nextToken = strchr(nextToken, '%');
+            if(nextToken == nullptr)
+                break;
+            indexString[0] = *(nextToken + 1);
+            indexString[1] = *(nextToken + 2);
+            indexString[2] = '\0';
+            *nextToken = strtol(indexString, nullptr, 16);
+            strncpy(nextToken + 1, nextToken + 3, request->content_len - (tag - nextToken));
+        }
+        config.SetConfigData("networkPsk", tag);
+    }
+
+    config.Save();
+    SendPage(request, pageToSend);
+    return ESP_OK;
+}
+
 bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
 {
     char* dataStart = nullptr;
     esp_err_t err = ESP_OK;
     bool shouldRestart = false;
-    char tag[16] = {};
+    char* tag = nullptr;
     constexpr char tagLoadedRestart[] = "loadedrestart";
     constexpr char tagSave[] = "save";
     constexpr char tagWifiSearch[] = "wifiSearch";
 
-    /* Handle saving first since that isn't dependent on config tags. */
+    /* Deal with saving since that isn't dependent on config tags. */
     if(strstr(data, tagSave) != nullptr)
     {
         shouldRestart = config.Save();
@@ -109,6 +318,7 @@ bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
 
     /* Otherwise, we are looking for exactly one tag which should be identical to that of the Config data.
      * If it isn't, it's invalid. */
+    tag = new char[16];
     strncpy(tag, data, strchr(data, ':') - data);
     
     if(config.ConfigDataIsValidTag(tag))
@@ -139,9 +349,13 @@ bool Http::HandleWs(httpd_req_t* request, char* data, size_t length)
                 sleep.TimerStart();
             }
         }
+
+        delete[] tag;
         return true;
     }
 
+    if(tag != nullptr)
+        delete[] tag;
     return false;
 }
 
@@ -154,6 +368,8 @@ esp_err_t Http::Init()
 
     /* Start httpd and register URIs. */
     return (    httpd_start(&handle, &httpConfig) |
+                httpd_register_uri_handler(handle, &uriFwSubmit) |
+                httpd_register_uri_handler(handle, &uriFwUpdate) |
                 httpd_register_uri_handler(handle, &uriHome) |
                 httpd_register_uri_handler(handle, &uriRestart) |
                 httpd_register_uri_handler(handle, &uriWifiSearch) |
@@ -234,6 +450,9 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
         itoa(config.GetConfigData("switchPolarity"), tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_SWITCHPOLARITY]]", tempBuf);
 
+        itoa(CONFIG_BOOTLOADER_PROJECT_VER, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[SYS_FWVER]]", tempBuf);
+
         if(strstr(newHtml, tagNetworkList) != nullptr)
             networkListAsSelect(newHtml, tagNetworkList);
 
@@ -273,95 +492,28 @@ esp_err_t onUriGet(httpd_req_t* request)
         pageToSend = (char*)htmlWifiSearch;
     else if(strstr(request->uri, "restart") != nullptr)
         pageToSend = (char*)htmlRestart;
+    else if(strstr(request->uri, "fwupdate") != nullptr)
+        pageToSend = (char*)htmlFwUpdate;
 
     return http.SendPage(request, pageToSend);
 }
 
 esp_err_t onUriPost(httpd_req_t* request)
 {
-    int err = 0;
     Http& http = Http::GetInstance();
-    int index = -1;
-    char indexString[4];
-    char* nextToken = nullptr;
-    char* pageToSend = (char*)htmlRestart;
-    char* tag = nullptr;
-    int tagLen = -1;
     
+    /* Structure allows for potentially future POST sub-handlers. */
     if((http.State == Http::State_WifiChoice) && strstr(request->uri, "wifisubmit") != nullptr)
-    {
-        /* Again, send back the home page by default unless we really are processing something. */
-        pageToSend = (char*)htmlRestart;
-
-        /* Get the POST data.
-         * For the record, I really hate that we're sending passwords in plaintext via POST, but whatever. It's quick-and-dirty for a reason... */
-        memset(http.Buffer, 0, http.BufferSize);
-        err = httpd_req_recv(request, http.Buffer, request->content_len);
-
-        /* If the socket was closed, abort everything. */
-        if(err == 0)
-            return ESP_FAIL;
-
-        /* Handle timeout.*/
-        else if(err == HTTPD_SOCK_ERR_TIMEOUT)
-            httpd_resp_send_408(request);
-
-        /* Handle SSID. */
-        tag = strstr(http.Buffer, "ssid=");
-
-        /* Find PSK. It may be that we never got one, so handle that case too. */
-        nextToken = strchr(tag, '&');
-        if(nextToken == nullptr)
-            tagLen = strlen(tag);
-        else tagLen = nextToken - tag;
-
-        /* Find the index of the selected network, then apply SSID. */
-        strncpy(indexString, tag + 5, tagLen);
-        index = atoi(indexString);
-        config.SetConfigData("networkSsid", http.NetworkList[index].ssid);
-
-        /* Apply PSK if there is one. */
-        if(http.NetworkList[index].needsPsk)
-        {
-            tag = strstr(http.Buffer, "psk=");
-            tag += 4;
-
-            /* The PSK arrives percent-encoded, so we have some character replacement to do. */
-            nextToken = tag;
-            while(nextToken != nullptr)
-            {
-                /* Turn '+' into spaces. */
-                nextToken = strchr(nextToken, '+');
-                if(nextToken == nullptr)
-                    break;
-                *nextToken = ' ';
-            }
-
-            /* Turn '%' into whatever the hex number after it is. */
-            nextToken = tag;
-            while(nextToken != nullptr)
-            {
-                nextToken = strchr(nextToken, '%');
-                if(nextToken == nullptr)
-                    break;
-                indexString[0] = *(nextToken + 1);
-                indexString[1] = *(nextToken + 2);
-                indexString[2] = '\0';
-                *nextToken = strtol(indexString, nullptr, 16);
-                strncpy(nextToken + 1, nextToken + 3, request->content_len - (tag - nextToken));
-            }
-            config.SetConfigData("networkPsk", tag);
-        }
-    }
-
-    config.Save();
-    http.SendPage(request, pageToSend);
-    return ESP_OK;
+        return http.HandleWifiSubmit(request);
+    else if(strstr(request->uri, "fwsubmit") != nullptr)
+        return http.HandleFwUpdate(request);
+    else return ESP_FAIL;
 }
 
 esp_err_t onWs(httpd_req_t* request)
 {
     esp_err_t err = ESP_OK;
+    Http& http = Http::GetInstance();
     uint8_t* rxBuf = nullptr;
     httpd_ws_frame_t wsFrame;
 
@@ -392,7 +544,7 @@ esp_err_t onWs(httpd_req_t* request)
     else
     {
         /* Handle the data. */
-        if(!Http::GetInstance().HandleWs(request, (char*)rxBuf, wsFrame.len))
+        if(!http.HandleWs(request, (char*)rxBuf, wsFrame.len))
         {
             ESP_LOGE(__func__, "Invalid payload!");
             err = ESP_ERR_INVALID_RESPONSE;

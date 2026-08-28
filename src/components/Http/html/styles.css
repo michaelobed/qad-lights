@@ -19,8 +19,18 @@ h2 {
     text-align: center;
 }
 
+h3 {
+    font-size: 30;
+    font-family: trebuchet ms;
+    text-align: center;
+}
+
 p, tr {
     font-size: 30;
+    text-align: center;
+}
+
+div {
     text-align: center;
 }
 
@@ -45,6 +55,11 @@ td {
     padding: 20px;
 }
 
+.fileSelect {
+    font-family: trebuchet ms;
+    transition-duration: 0.4s;
+}
+
 .rgbSlider, select {
     margin-left: 20px;
     width: 200px;
@@ -62,4 +77,10 @@ td {
 .passwordBox {
     margin-left: 20px;
     width: 190px;
+}
+
+.uploaderBar {
+    display: inline-block;
+    width: 350px;
+    height: 30px;
 }
