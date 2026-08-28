@@ -46,6 +46,7 @@ class Http
     private:
         size_t fwBytesRemaining;
         uint8_t fwChunkBuffer[BufferSize];
+        bool fwCanRestart;
         bool fwIsFirstChunk;
         httpd_handle_t handle;
         static constexpr int restartWaitMs = 3000;

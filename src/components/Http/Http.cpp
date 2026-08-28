@@ -37,6 +37,7 @@ Http::Http()
 {
     memset(Buffer, 0, BufferSize);
     fwBytesRemaining = 0;
+    fwCanRestart = false;
     fwIsFirstChunk = false;
     handle = nullptr;
     State = State_Normal;
@@ -84,6 +85,7 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
     size_t lengthBase64 = 0;
     constexpr char tagChunkData[] = "\"chunkData\"\r\n\r\n";
     constexpr char tagFwSize[] = "\"fwFileSize\"\r\n\r\n";
+    constexpr char tagFwRestart[] = "\"fwRestart\"\r\n\r\n";
     bool shouldContinue = true;
 
     /* Read data in. */
@@ -95,7 +97,19 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
         case State_Normal:
             dataStart = (uint8_t*)strstr(Buffer, tagFwSize);
             if(dataStart == nullptr)
+            {
+                /* Check for at least the fwRestart tag. */
+                if(fwCanRestart)
+                {
+                    dataStart = (uint8_t*)strstr(Buffer, tagFwRestart);
+                    if(dataStart != nullptr)
+                    {
+                        httpd_resp_send(request, nullptr, 0);
+                        Restart();
+                    }
+                }
                 err = ESP_FAIL;
+            }
             else
             {
                 dataStart += strlen(tagFwSize);

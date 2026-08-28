@@ -13,7 +13,7 @@
     </head>
 
     <body>
-        <h1>Firmware update</h1>
+        <h1>Update firmware</h1>
         <p>Choose a firmware image file below, then click OK.</p>
         <p>
             <input type="file" class="fileSelect" id="fwfile" name="fwfile" accept=".bin" oninput="onFileSelect(this)" /> 
@@ -46,8 +46,9 @@
 
             async function uploadStart() {
                 const fwFileSize = fwFile.files[0].size;
-                var toSend = new FormData();
                 var response;
+                const restartTime = 20000;
+                var toSend = new FormData();
 
                 /* Set up. */
                 buttonOK.disabled = true;
@@ -69,7 +70,6 @@
                     var startIndex = fwFileSize - remaining;
                     var chunkData = await fwFile.files[0].slice(startIndex, startIndex + chunkSize).bytes();
                     var chunkDataBase64 = chunkData.toBase64();
-                    const restartTime = 30000;
                     
                     toSend = new FormData();
                     toSend.append("chunkData", chunkDataBase64);
@@ -80,12 +80,18 @@
                     })) {
                         return;
                     }
+                }
 
-                    if(remaining == 0) {
-                        await sendPayload(response, () => {
-                            statusText.innerText = "Done!";
-                        });
-                    }
+                statusText.innerText = "Done! Restarting...";
+
+                /* Prepare and send restart payload, then go home. */
+                toSend = new FormData();
+                toSend.append("fwRestart", "fwRestart");
+                if(await sendPayload(toSend)) {
+                    await setTimeout(() => goHome(), restartTime);
+                }
+                else {
+                    statusText.innerText = "Manual restart required.";
                 }
 
                 async function sendPayload(data, onSuccess = () => {}) {
@@ -97,14 +103,13 @@
                     if(response.ok) {
                         onSuccess();
                     }
+
+                    /* Using HTTP status 422 as the "not updating" status. */
+                    else if(response.status == 422) {
+                        statusText.innerText = "Firmware matches, not updating.";
+                    }
                     else {
-                        /* Using HTTP status 422 as the "not updating" status. */
-                        if(response.status == 422) {
-                            statusText.innerText = "Firmware matches, not updating.";
-                        }
-                        else {
-                            statusText.innerText = "Failed!";
-                        }
+                        statusText.innerText = "Failed!";
                     }
 
                     return response.ok;
