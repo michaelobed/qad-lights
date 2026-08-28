@@ -83,7 +83,6 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
     size_t length = 0;
     size_t lengthBase64 = 0;
     constexpr char tagChunkData[] = "\"chunkData\"\r\n\r\n";
-    constexpr char tagChunkSize[] = "\"chunkSize\"\r\n\r\n";
     constexpr char tagFwSize[] = "\"fwFileSize\"\r\n\r\n";
     bool shouldContinue = true;
 
@@ -111,14 +110,11 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
         /* This should be the a chunk of the firmware data. We may ignore it if we don't need to update. */
         case State_FwGotSize:
         case State_FwIgnoring:
-            dataStart = (uint8_t*)strstr(Buffer, tagChunkSize);
+            dataStart = (uint8_t*)strstr((char*)Buffer, tagChunkData);
             if(dataStart == nullptr)
                 err = ESP_FAIL;
             else
             {
-                /* The POST request will give the Base64-encoded length in the chunkSize tag, not the binary chunk length. */
-                dataStart += strlen(tagChunkSize);
-                dataStart = (uint8_t*)strstr((char*)dataStart, tagChunkData);
                 dataStart += strlen(tagChunkData);
                 lengthBase64 = strcspn((char*)dataStart, "\r\n");
                 

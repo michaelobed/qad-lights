@@ -76,9 +76,7 @@
                     var chunkData = await fwFile.files[0].slice(startIndex, startIndex + chunkSize).bytes();
                     var chunkDataBase64 = chunkData.toBase64();
                     
-                    /* chunkSize here refers to the encoded size, not the original binary chunk size. */
                     toSend = new FormData();
-                    toSend.append("chunkSize", chunkDataBase64.length);
                     toSend.append("chunkData", chunkDataBase64);
 
                     response = await fetch("/fwsubmit", {
