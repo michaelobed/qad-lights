@@ -24,13 +24,13 @@
         </div>
         <p>
             <input type="button" class="buttonNavigation" value="Back" onclick="goHome();" />
-            <input type="submit" class="buttonNavigation" id="buttonOK" value="OK" disabled="true" onclick="uploadStart();" />
+            <input type="button" class="buttonNavigation" id="buttonOK" value="OK" disabled="true" onclick="uploadStart();" />
         </p>
 
         <script>
             const buttonOK = document.getElementById("buttonOK");
+            const chunkSizeMax = 1024;
             const fwFile = document.getElementById("fwfile");
-            const maxChunkSize = 32768;
             const progress = document.getElementById("fwfileprogress");
             var remaining = 0;
             const statusText = document.getElementById("fwstatustext");
@@ -47,6 +47,7 @@
             async function uploadStart() {
                 const fwFileSize = fwFile.files[0].size;
                 var toSend = new FormData();
+                var response;
 
                 /* Set up. */
                 buttonOK.disabled = true;
@@ -58,7 +59,7 @@
 
                 /* Inform the device of how much data to expect. */
                 toSend.append('fwFileSize', fwFileSize);
-                const response = await fetch("/fwsubmit", {
+                response = await fetch("/fwsubmit", {
                     method: "POST",
                     body: toSend
                 });
@@ -70,15 +71,17 @@
                 
                 /* Chunk and send. */
                 while(remaining > 0) {
-                    var chunkSize = Math.min(remaining, maxChunkSize);
+                    var chunkSize = Math.min(remaining, chunkSizeMax);
                     var startIndex = fwFileSize - remaining;
-                    var chunkData = fwFile.files[0].slice(startIndex, startIndex + chunkSize);
+                    var chunkData = await fwFile.files[0].slice(startIndex, startIndex + chunkSize).bytes();
+                    var chunkDataBase64 = chunkData.toBase64();
                     
+                    /* chunkSize here refers to the encoded size, not the original binary chunk size. */
                     toSend = new FormData();
-                    toSend.append("chunkSize", chunkSize);
-                    toSend.append("chunkData", chunkData);
+                    toSend.append("chunkSize", chunkDataBase64.length);
+                    toSend.append("chunkData", chunkDataBase64);
 
-                    const response = await fetch("/fwsubmit", {
+                    response = await fetch("/fwsubmit", {
                         method: "POST",
                         body: toSend
                     });
@@ -91,9 +94,16 @@
                         signalError();
                         return;
                     }
-                }
 
-                statusText.innerText = "Done!";
+                    if(remaining == 0) {
+                        if(response.ok) {
+                            statusText.innerText = "Done!";
+                        }
+                        else {
+                            signalError();
+                        }
+                    }
+                }
 
                 function signalError() {
                     statusText.innerText = "Failed!";

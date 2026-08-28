@@ -32,7 +32,7 @@ class Http
             return h;
         }
 
-        static constexpr size_t BufferSize = 40000;
+        static constexpr size_t BufferSize = 20000;
         char Buffer[BufferSize];
         std::vector<Network::WifiInfo> NetworkList;
         StateType State;
@@ -45,6 +45,7 @@ class Http
 
     private:
         size_t fwBytesRemaining;
+        uint8_t fwChunkBuffer[BufferSize];
         bool fwIsFirstChunk;
         httpd_handle_t handle;
         static constexpr int restartWaitMs = 3000;

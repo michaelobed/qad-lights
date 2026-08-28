@@ -6,6 +6,7 @@
 //  
 //  Copyright © 2026 Michael Obed.
 
+#include "mbedtls/base64.h"
 #include "Config.hpp"
 #include "esp_log.h"
 #include "Http.hpp"
@@ -78,10 +79,11 @@ char* Http::doReplacement(char* html, const char* toLookFor, const char* toRepla
 esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
 {
     uint8_t* dataStart = nullptr;
-    esp_err_t err = ESP_OK;
+    int err = ESP_OK;
     size_t length = 0;
+    size_t lengthBase64 = 0;
+    constexpr char tagChunkData[] = "\"chunkData\"\r\n\r\n";
     constexpr char tagChunkSize[] = "\"chunkSize\"\r\n\r\n";
-    constexpr char tagContentType[] = "octet-stream\r\n\r\n";
     constexpr char tagFwSize[] = "\"fwFileSize\"\r\n\r\n";
     bool shouldContinue = true;
 
@@ -114,16 +116,24 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
                 err = ESP_FAIL;
             else
             {
+                /* The POST request will give the Base64-encoded length in the chunkSize tag, not the binary chunk length. */
                 dataStart += strlen(tagChunkSize);
-                length = atoi((char*)dataStart);
-
+                dataStart = (uint8_t*)strstr((char*)dataStart, tagChunkData);
+                dataStart += strlen(tagChunkData);
+                lengthBase64 = strcspn((char*)dataStart, "\r\n");
+                
+                /* Convert the data from Base64. */
+                memset(fwChunkBuffer, 0, BufferSize);
+                err = mbedtls_base64_decode(fwChunkBuffer, BufferSize, &length, dataStart, lengthBase64);
+                
                 if(State != State_FwIgnoring)
                 {
-                    dataStart = (uint8_t*)strstr((char*)dataStart, tagContentType);
-                    dataStart += strlen(tagContentType);
-                    if(fwIsFirstChunk)
+                    if(err != 0)
+                        ESP_LOGE(__func__, "Base64 decode failed with %u bytes remaining (%d)!", fwBytesRemaining, err);
+
+                    else if(fwIsFirstChunk)
                     {
-                        err = update.WriteStart(dataStart, length, fwBytesRemaining, shouldContinue);
+                        err = update.WriteStart(fwChunkBuffer, length, fwBytesRemaining, shouldContinue);
                         if((err == ESP_OK) && !shouldContinue)
                         {
                             ESP_LOGW(__func__, "Firmware data identical to current, ignoring further data.");
@@ -131,7 +141,7 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
                         }
                         fwIsFirstChunk = false;
                     }
-                    else err = update.WriteContinue(dataStart, length);
+                    else err = update.WriteContinue(fwChunkBuffer, length);
                 }
             }
             break;
@@ -141,11 +151,11 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
             return ESP_FAIL;
     }
 
-    ESP_LOGI(__func__, "length: %u, fwBytesRemaining: %u", length, fwBytesRemaining);
-
     if(err == ESP_OK)
     {
-        httpd_resp_send(request, nullptr, 0);
+        /* If this was the last chunk, don't send a response just yet. */
+        if(fwBytesRemaining > length)
+            httpd_resp_send(request, nullptr, 0);
         fwBytesRemaining -= length;
     }
     else
@@ -160,7 +170,11 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
     if(fwBytesRemaining == 0)
     {
         if(State != State_FwIgnoring)
+        {
             err = update.WriteEnd();
+            if(err != ESP_OK)
+                httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Bad image!");
+        }
         State = State_Normal;
     }
 
