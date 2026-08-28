@@ -44,6 +44,12 @@ This is easily the thing that took the longest, partly because PWM and WiFi are 
 
 I almost forgot to mention the lack of HTTP**S** support: I believe you need to supply your own .pem certificate to use that, and for this simple use case that will never see the light of the Internet, I couldn't be bothered with that. It's a good thing to consider, though, especially given that the password to your WiFi network of choice is otherwise supplied over an unencrypted connection in plaintext using the HTTP POST method. A man-in-the-middle attack is possible I suppose, but improbable and impractical, so I'm not too worried.
 
+### Over-the-air firmware updates
+
+The system supports over-the-air firmware updates, or at least firmware updates that don't require you to dismantle your setup and connect a USB cable. For now it's a bit slow and doesn't have per-packet checksumming, so it can fail from time to time, but never in a way that bricks the ESP32 thanks to the implementation of two dedicated OTA partitions.
+
+To use it, navigate to _Update firmware_, then select a .bin file, then click _OK_. If successful, the system will automatically restart and boot from the new firmware image.
+
 ### Sleep
 
 The system supports going to sleep when the lights have been off for some period of time to save power. While sleep can be used in setups with normally-closed switches, it isn't recommended as it will contribute to a slightly higher current draw (~15mA more from informal tests).
@@ -65,7 +71,7 @@ As always, I'm releasing this under the MIT license so people can fork the repo,
 
 Since I did bash this together, there are a number of things that are missing or that I'm not completely happy with (in no particular order):
 
-- **Over-the-air firmware update support**. I've provided a partition or two for that, but I've never looked into doing it on the ESP32. It seems simple enough to do, however. Maybe one of you can do it... 😏
+- ~~**Over-the-air firmware update support**. I've provided a partition or two for that, but I've never looked into doing it on the ESP32. It seems simple enough to do, however. Maybe one of you can do it... 😏~~
 - **Support for a variable number of switches**. In theory, the logic I have in place makes that feasible, and the `Config` class can easily be extended to allow both the number of switches and their GPIO assignments to be configurable.
 - **Make the UI less boring**? This one's more of a maybe since I don't really care that much and just wanted it working, but perhaps a square that changes colours next to the RGB sliders could be cool, albeit more colour accurate than the lights will ever be.
 - ~~**Sleep mode**! These should be able to go to sleep when sitting there for ages doing nothing, then wake up and drive the LEDs when the door is opened. This should be easy enough to set up as a wake-up interrupt of some kind.~~

@@ -450,6 +450,9 @@ esp_err_t Http::SendPage(httpd_req_t* request, char* page)
         itoa(config.GetConfigData("switchPolarity"), tempBuf, 10);
         newHtml = doReplacement(newHtml, "[[CONFIG_SWITCHPOLARITY]]", tempBuf);
 
+        itoa(CONFIG_BOOTLOADER_PROJECT_VER, tempBuf, 10);
+        newHtml = doReplacement(newHtml, "[[SYS_FWVER]]", tempBuf);
+
         if(strstr(newHtml, tagNetworkList) != nullptr)
             networkListAsSelect(newHtml, tagNetworkList);
 
