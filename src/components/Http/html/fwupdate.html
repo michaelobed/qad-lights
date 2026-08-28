@@ -59,13 +59,7 @@
 
                 /* Inform the device of how much data to expect. */
                 toSend.append('fwFileSize', fwFileSize);
-                response = await fetch("/fwsubmit", {
-                    method: "POST",
-                    body: toSend
-                });
-
-                if(!response.ok) {
-                    signalError();
+                if(!await sendPayload(toSend)) {
                     return;
                 }
                 
@@ -75,36 +69,45 @@
                     var startIndex = fwFileSize - remaining;
                     var chunkData = await fwFile.files[0].slice(startIndex, startIndex + chunkSize).bytes();
                     var chunkDataBase64 = chunkData.toBase64();
+                    const restartTime = 30000;
                     
                     toSend = new FormData();
                     toSend.append("chunkData", chunkDataBase64);
 
-                    response = await fetch("/fwsubmit", {
-                        method: "POST",
-                        body: toSend
-                    });
-
-                    if(response.ok) {
+                    if(!await sendPayload(toSend, () => {
                         progress.value += chunkSize;
                         remaining -= chunkSize;
-                    }
-                    else {
-                        signalError();
+                    })) {
                         return;
                     }
 
                     if(remaining == 0) {
-                        if(response.ok) {
+                        await sendPayload(response, () => {
                             statusText.innerText = "Done!";
-                        }
-                        else {
-                            signalError();
-                        }
+                        });
                     }
                 }
 
-                function signalError() {
-                    statusText.innerText = "Failed!";
+                async function sendPayload(data, onSuccess = () => {}) {
+                    const response = await fetch("/fwsubmit", {
+                        method: "POST",
+                        body: data
+                    });
+
+                    if(response.ok) {
+                        onSuccess();
+                    }
+                    else {
+                        /* Using HTTP status 422 as the "not updating" status. */
+                        if(response.status == 422) {
+                            statusText.innerText = "Firmware matches, not updating.";
+                        }
+                        else {
+                            statusText.innerText = "Failed!";
+                        }
+                    }
+
+                    return response.ok;
                 }
             }
         </script>

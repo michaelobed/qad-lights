@@ -149,8 +149,15 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
 
     if(err == ESP_OK)
     {
+        /* Send HTTP status 422 (arbitrary, I know - others are too specific!) for a matching image. */
+        if(State == State_FwIgnoring)
+        {
+            httpd_resp_send_custom_err(request, "422 Unprocessable Content", "Update matches current image");
+            State = State_Normal;
+        }
+
         /* If this was the last chunk, don't send a response just yet. */
-        if(fwBytesRemaining > length)
+        else if(fwBytesRemaining > length)
             httpd_resp_send(request, nullptr, 0);
         fwBytesRemaining -= length;
     }
@@ -165,13 +172,13 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
     /* End the write if all bytes have been received. */
     if(fwBytesRemaining == 0)
     {
-        if(State != State_FwIgnoring)
+        err = update.WriteEnd();
+        if(err == ESP_OK)
         {
-            err = update.WriteEnd();
-            if(err == ESP_OK)
-                httpd_resp_send(request, nullptr, 0);
-            else httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Bad image!");
+            httpd_resp_send(request, nullptr, 0);
+            fwCanRestart = true;
         }
+        else httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Bad image!");
         State = State_Normal;
     }
 
