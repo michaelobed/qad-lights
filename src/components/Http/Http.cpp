@@ -168,8 +168,9 @@ esp_err_t Http::HandleFwUpdate(httpd_req_t* request)
         if(State != State_FwIgnoring)
         {
             err = update.WriteEnd();
-            if(err != ESP_OK)
-                httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Bad image!");
+            if(err == ESP_OK)
+                httpd_resp_send(request, nullptr, 0);
+            else httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Bad image!");
         }
         State = State_Normal;
     }
