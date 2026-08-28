@@ -76,3 +76,4 @@ Since I did bash this together, there are a number of things that are missing or
 - **Make the UI less boring**? This one's more of a maybe since I don't really care that much and just wanted it working, but perhaps a square that changes colours next to the RGB sliders could be cool, albeit more colour accurate than the lights will ever be.
 - ~~**Sleep mode**! These should be able to go to sleep when sitting there for ages doing nothing, then wake up and drive the LEDs when the door is opened. This should be easy enough to set up as a wake-up interrupt of some kind.~~
 - **Configurable fade time**. This was actually supposed to be in the `Config` class too, but I just haven't gotten around to it.
+- **Improve OTA updates**. This is mostly finding ways to increase the chunk size to make updates go faster, as well as adding a per-chunk checksum so we can retry chunks that get corrupted in transit.
